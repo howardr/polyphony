@@ -19,14 +19,14 @@ date = datetime.date(2024, 2, 20)
 # look up historical data data
 price_data_start = utils.subtract_trading_days(date, 201) # need >= 200 days of data for SPY 200d MA
 price_data_end = (date + datetime.timedelta(days=1))
-price_data = yf.download("SPY TQQQ BIL", start=price_data_start, end=price_data_end, progress=False)
+price_data = yf.download('SPY TQQQ BIL', start=price_data_start, end=price_data_end, progress=False)
 
 # get allocation for 2024-2-20
 allocation = allocate(algo, date, price_data)
 
 print(allocation)
 # {
-#   "TQQQ": 1.0
+#   'TQQQ': 1.0
 # }
 ```
 
@@ -93,10 +93,10 @@ Simple Example
 
 ```python
 # Equal allocation between SPY, QQQ, and XLE
-["wteq", [
-  ["asset", "SPY"],
-  ["asset", "QQQ"],
-  ["asset", "XLE"]
+['wteq', [
+  ['asset', 'SPY'],
+  ['asset', 'QQQ'],
+  ['asset', 'XLE']
 ]]
 ```
 
@@ -108,25 +108,25 @@ More Complex
 #     allocate quality between SPY, QQQ, XLE
 # otherwise
 #     invest only in BIL
-["group", "My Algo", [
-["ifelse", 
-  ["gt", ["now", "SPY"], ["ma", "SPY", 200]],
-  ["wteq", [
-    ["asset", "SPY"],
-    ["asset", "QQQ"],
-    ["asset", "XLE"]
+['group', 'My Algo', [
+['ifelse', 
+  ['gt', ['now', ['asset', 'SPY']], ['ma', ['asset', 'SPY'], 200]],
+  ['wteq', [
+    ['asset', 'SPY'],
+    ['asset', 'QQQ'],
+    ['asset', 'XLE']
   ]],
-  ["asset", "BIL"]
+  ['asset', 'BIL']
 ]
 ]]
 ```
 
 ### Primitive Objects
 
-* _String_ `"foo"` or `'bar'`
+* _String_ `'foo'` or `'bar'`
 * _Number_ `1`, `2.3`, or `-0.4`
 * _Boolean_ `true` or `false`
-* _List_ `[]` or `["one", 2, false]`
+* _List_ `[]` or `['one', 2, false]`
 
 ### Predicate Object
 
@@ -202,7 +202,7 @@ Examples
 ['wteq', [
   ['asset', 'SPY'],
   ['ifelse',
-    ['gt', ['rsi', 'SPY', 15], ['number', 80]],
+    ['gt', ['rsi', ['asset', 'SPY'], 15], ['number', 80]],
     ['asset', 'BIL'],
     ['asset', 'TQQQ']
   ]
@@ -229,7 +229,7 @@ Examples
 ['ifelse',
   # conditional
   # current price of SPY > 200d average of SPY
-  ['gt', ['now', 'SPY'], ['ma', 'SPY', 200]],
+  ['gt', ['now', ['asset', 'SPY']], ['ma', ['asset', 'SPY'], 200]],
 
   # true_block
   # if conditional true, use BIL
@@ -315,7 +315,7 @@ Examples
 
 ```python
 # Example 1
-['now', 'SPY']
+['now', ['asset', 'SPY']]
 ```
 
 ##### `cr` - Cumulative Return
@@ -329,7 +329,7 @@ Examples
 ```python
 # Example 1
 # 10d cumulative return of SPY
-['cr', 'SPY', 10]
+['cr', ['asset', 'SPY'], 10]
 ```
 
 ##### `ma` - Moving Average
@@ -343,7 +343,7 @@ Examples
 ```python
 # Example 1
 # 10d moving average of SPY
-['ma', 'SPY', 10]
+['ma', ['asset', 'SPY'], 10]
 ```
 
 ##### `mar` - Moving Average Return
@@ -357,7 +357,7 @@ Examples
 ```python
 # Example 1
 # 10d moving average return of SPY
-['mar', 'SPY', 10]
+['mar', ['asset', 'SPY'], 10]
 ```
 
 ##### `Number` - Number
@@ -381,7 +381,7 @@ Examples
   # `number` is used in cases when a comparison is made against a fixed number
   ['lt',
     # 10 day RSI of SPY < 90
-    ['rsi', 'SPY', 10],
+    ['rsi', ['asset', 'SPY'], 10],
     ['number', 90]
   ],
   ['asset', 'SPY'],
@@ -400,7 +400,7 @@ Examples
 ```python
 # Example 1
 # 10d relative strength index of SPY
-['rsi', 'SPY', 10]
+['rsi', ['asset', 'SPY'], 10]
 ```
 
 #### Comparator ####
@@ -420,8 +420,8 @@ Examples
 ```python
 # Example 1
 ['gt',
-  ['ma', 'SPY', 10],
-  ['ma', 'SPY', 60],
+  ['ma', ['asset', 'SPY'], 10],
+  ['ma', ['asset', 'SPY'], 60],
 ]
 
 # Example 1 (annotated)
@@ -430,11 +430,11 @@ Examples
 
   # lhs (left hand side)
   # 10d moving average of SPY
-  ['ma', 'SPY', 10],
+  ['ma', ['asset', 'SPY'], 10],
 
   # rhs (right hand side)
   # 60d moving average of SPY
-  ['ma', 'SPY', 60]
+  ['ma', ['asset', 'SPY'], 60]
 ]
 ```
 
@@ -449,8 +449,8 @@ Examples
 ```python
 # Example 1
 ['gte',
-  ['ma', 'SPY', 10],
-  ['ma', 'SPY', 60],
+  ['ma', ['asset', 'SPY'], 10],
+  ['ma', ['asset', 'SPY'], 60],
 ]
 
 # Example 1 (annotated)
@@ -459,11 +459,11 @@ Examples
 
   # lhs (left hand side)
   # 10d moving average of SPY
-  ['ma', 'SPY', 10],
+  ['ma', ['asset', 'SPY'], 10],
 
   # rhs (right hand side)
   # 60d moving average of SPY
-  ['ma', 'SPY', 60]
+  ['ma', ['asset', 'SPY'], 60]
 ]
 ```
 
@@ -478,8 +478,8 @@ Examples
 ```python
 # Example 1
 ['lt',
-  ['ma', 'SPY', 10],
-  ['ma', 'SPY', 60],
+  ['ma', ['asset', 'SPY'], 10],
+  ['ma', ['asset', 'SPY'], 60],
 ]
 
 # Example 1 (annotated)
@@ -488,11 +488,11 @@ Examples
 
   # lhs (left hand side)
   # 10d moving average of SPY
-  ['ma', 'SPY', 10],
+  ['ma', ['asset', 'SPY'], 10],
 
   # rhs (right hand side)
   # 60d moving average of SPY
-  ['ma', 'SPY', 60]
+  ['ma', ['asset', 'SPY'], 60]
 ]
 ```
 
@@ -507,8 +507,8 @@ Examples
 ```python
 # Example 1
 ['lte',
-  ['ma', 'SPY', 10],
-  ['ma', 'SPY', 60],
+  ['ma', ['asset', 'SPY'], 10],
+  ['ma', ['asset', 'SPY'], 60],
 ]
 
 # Example 1 (annotated)
@@ -517,10 +517,10 @@ Examples
 
   # lhs (left hand side)
   # 10d moving average of SPY
-  ['ma', 'SPY', 10],
+  ['ma', ['asset', 'SPY'], 10],
 
   # rhs (right hand side)
   # 60d moving average of SPY
-  ['ma', 'SPY', 60]
+  ['ma', ['asset', 'SPY'], 60]
 ]
 ```
