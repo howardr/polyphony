@@ -1,10 +1,10 @@
 import warnings
 import datetime
 import random
-import requests
 import yfinance as yf
 from src.parse import parse
 from src.allocate import allocate, preprocess
+import src.composer as composer
 import pandas as pd
 import sys
 
@@ -14,18 +14,6 @@ warnings.filterwarnings(
     category=FutureWarning,
     module="yfinance",
 )
-
-def fetch_and_parse_json(symphony_id):
-  url = f"https://backtest-api.composer.trade/api/v1/public/symphonies/{symphony_id}/score"
-  response = requests.get(url)
-  
-  if response.status_code == 200:
-    # Parse JSON response into Python dictionary
-    data = response.json()
-    return data
-  else:
-    print(f"Failed to fetch data: HTTP {response.status_code}")
-    return None
 
 def subtract_trading_days(start_date, trading_days=10):
   trading_days = int(float(trading_days) * 1.1)
@@ -67,7 +55,7 @@ algo = None
 num_days = 10
 date = datetime.date.today()
 
-data = fetch_and_parse_json(symphony_id)
+data = composer.fetch_definition(symphony_id)
 algo = parse(data)
 
 #algo = ('group', 'V1 BWC SPY Volatility Focus ? Anti-Beta ? Low Correlation ', ('wteq', (('wteq', (('ifelse', ('gt', ('now', ('asset', 'SPY')), ('ma', ('asset', 'SPY'), 50)), ('wteq', (('ifelse', ('lt', ('rsi', ('asset', 'SPY'), 5), ('number', 35.0)), ('asset', 'SVIX'), ('wteq', (('ifelse', ('gt', ('rsi', ('asset', 'SPY'), 10), ('number', 65.0)), ('wteq', (('ifelse', ('lt', ('cr', ('asset', 'SPY'), 3), ('number', 0.0)), ('wteq', (('filter', (('asset', 'UVXY'), ('asset', 'VIXM'), ('asset', 'VXZ'), ('asset', 'VXX')), ('mar', 5), ('bottom', 1)),)), ('wteq', (('filter', (('asset', 'VXX'), ('asset', 'BTAL')), ('rsi', 2), ('top', 1)),))),)), ('wteq', (('ifelse', ('gt', ('ema', ('asset', 'SPY'), 2), ('ema', ('asset', 'SPY'), 5)), ('asset', 'SVIX'), ('wteq', (('filter', (('asset', 'BTAL'), ('asset', 'BIL'), ('asset', 'GLD'), ('asset', 'XLE'), ('asset', 'COM'), ('asset', 'SHV')), ('mar', 10), ('top', 2)), ('asset', 'BTAL')))),))),))),)), ('wteq', (('filter', (('asset', 'BTAL'), ('asset', 'BTAL'), ('asset', 'BIL'), ('asset', 'GLD'), ('asset', 'XLE'), ('asset', 'COM'), ('asset', 'SHV')), ('mar', 30), ('top', 3)),))),)),))), ('asset', 'VXX'), ('asset', 'KMLM'), ('filter', (('asset', 'DBMF'), ('asset', 'KMLM'), ('asset', 'FMF'), ('asset', 'CTA'), ('asset', 'WTMF')), ('rsi', 14), ('bottom', 1)), ('asset', 'BTAL'), ('asset', 'TECL'), ('asset', 'GLD'), ('asset', 'COM'), ('asset', 'XLE'), ('asset', 'VIXM'), ('asset', 'SPXL'), ('asset', 'WTMF'), ('asset', 'SVXY'), ('asset', 'SHY'), ('group', 'V3 BWC: Managed Futures', ('wteq', (('wteq', (('wtinvol', (('filter', (('asset', 'DBMF'), ('asset', 'KMLM'), ('asset', 'FMF'), ('asset', 'CTA'), ('asset', 'WTMF')), ('stdevr', 20), ('bottom', 1)), ('filter', (('asset', 'DBMF'), ('asset', 'KMLM'), ('asset', 'FMF'), ('asset', 'CTA'), ('asset', 'WTMF')), ('rsi', 10), ('bottom', 1)), ('filter', (('asset', 'DBMF'), ('asset', 'KMLM'), ('asset', 'FMF'), ('asset', 'CTA'), ('asset', 'WTMF')), ('mdd', 20), ('bottom', 1)), ('filter', (('asset', 'DBMF'), ('asset', 'KMLM'), ('asset', 'FMF'), ('asset', 'CTA'), ('asset', 'WTMF')), ('rsi', 14), ('bottom', 1))), 20),)),))), ('asset', 'BIL'), ('asset', 'SHV'), ('filter', (('asset', 'DBMF'), ('asset', 'KMLM'), ('asset', 'FMF'), ('asset', 'CTA'), ('asset', 'WTMF')), ('mdd', 20), ('bottom', 1)), ('filter', (('asset', 'DBMF'), ('asset', 'KMLM'), ('asset', 'FMF'), ('asset', 'CTA'), ('asset', 'WTMF')), ('rsi', 10), ('bottom', 1)), ('asset', 'CTA'), ('asset', 'VXZ'), ('asset', 'FMF'), ('asset', 'TLT'), ('asset', 'BSV'), ('asset', 'DBMF'), ('asset', 'UVXY'), ('filter', (('asset', 'DBMF'), ('asset', 'KMLM'), ('asset', 'FMF'), ('asset', 'CTA'), ('asset', 'WTMF')), ('stdevr', 20), ('bottom', 1))
