@@ -1,0 +1,53 @@
+#ifelse -> AssetCollection
+#eqwt -> AssetCollection
+#filter -> AssetCollection
+#gt -> Boolean
+#lt -> Boolean
+#now -> Price
+#ma -> Price
+#rsi -> Percent
+
+block
+ * asset
+ * group
+ * weight
+   * equal
+   * specified
+   * inverse volatility
+   * market cap
+ * if/else
+ * filter
+
+signal
+ * now
+ * ma
+ * rsi
+
+comparator
+ * gt
+ * lt
+
+*signal*(block, args) -> number
+  ma() -> price
+  rsi() -> percent
+  now() -> percent
+*comparator*(signal, signal) -> boolean
+
+*block* -> allocation
+  asset(ticker)
+    ['asset', ticker[string]]
+  group(name, [block])
+  *weight*([block])
+    wteq
+  ifelse(comparator, block, block)
+  filter([block], signal, sort) # each block becomes and independent block
+
+*sort*(limit)
+  top
+  bottom
+
+allocation -> { asset: percent }
+
+independent block
+
+run(block, date)

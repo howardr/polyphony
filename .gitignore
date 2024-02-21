@@ -1,0 +1,5 @@
+download/*
+og.py
+db.json
+debug.log
+__pycache__
