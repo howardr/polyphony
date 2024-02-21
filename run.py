@@ -5,6 +5,7 @@ import yfinance as yf
 from src.parse import parse
 from src.allocate import allocate, preprocess
 import src.composer as composer
+import src.utils as utils
 import pandas as pd
 import sys
 
@@ -14,21 +15,6 @@ warnings.filterwarnings(
     category=FutureWarning,
     module="yfinance",
 )
-
-def subtract_trading_days(start_date, trading_days=10):
-  trading_days = int(float(trading_days) * 1.1)
-
-  # Convert start_date to a datetime object if it's a string
-  if isinstance(start_date, str):
-    start_date = datetime.strptime(start_date, "%Y-%m-%d")
-  
-  days_subtracted = 0
-  while days_subtracted < trading_days:
-    start_date -= datetime.timedelta(days=1)  # Move back one day
-    if start_date.weekday() < 5:  # Monday to Friday are considered trading days (0 to 4)
-      days_subtracted += 1
-
-  return start_date
 
 # Example symphony_id
 # Example respomse
@@ -64,7 +50,7 @@ algo = parse(data)
 summary = preprocess(algo)
 tickers = summary["assets"]
 
-start_date = subtract_trading_days(date, summary["max_window_days"] + num_days)
+start_date = utils.subtract_trading_days(date, summary["max_window_days"] + num_days)
 # end is exclusive [start, end) so we need to add an extra day
 price_data = yf.download(" ".join(tickers), start=start_date, end=(date + datetime.timedelta(days=1)), progress=False)
 
