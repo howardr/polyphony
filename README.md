@@ -1,3 +1,26 @@
+# Setup
+
+### Dependencies ###
+
+```
+pip install -r requirements.txt
+```
+
+### Test ###
+
+Run smoke tests
+
+```
+python smoke.py
+```
+
+Unit tests
+
+```
+python tests
+```
+
+# Reference
 
 ## Allocations
 
