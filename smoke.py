@@ -1,0 +1,192 @@
+import warnings
+import datetime
+import requests
+import yfinance as yf
+from src.parse import parse
+from src.allocate import allocate, preprocess
+import pandas as pd
+
+warnings.filterwarnings(
+    "ignore",
+    message="The 'unit' keyword in TimedeltaIndex construction is deprecated",
+    category=FutureWarning,
+    module="yfinance",
+)
+
+def fetch_definition(id):
+  url = f"https://backtest-api.composer.trade/api/v1/public/symphonies/{id}/score"
+  response = requests.get(url)
+  
+  if response.status_code == 200:
+    # Parse JSON response into Python dictionary
+    data = response.json()
+    return data
+  else:
+    print(f"Failed to fetch data: HTTP {response.status_code}")
+    return None
+
+def convert_trading_date(date_int):
+  date_1 = datetime.datetime.strptime("01/01/1970", "%m/%d/%Y")
+  dt = date_1 + datetime.timedelta(days=int(date_int))
+
+  return dt
+
+def fetch_backtest(id, start_date, end_date):
+  payload = {
+    'capital': 10000,
+    'apply_reg_fee': True,
+    'apply_taf_fee': True,
+    'backtest_version': "v2",
+    'slippage_percent': 0.0005,
+    'start_date': start_date.strftime('%Y-%m-%d'),
+    'end_date': end_date.strftime('%Y-%m-%d') 
+  }
+
+  url = f"https://backtest-api.composer.trade/api/v2/public/symphonies/{id}/backtest"
+
+  data = requests.post(url, json=payload)
+  jsond = data.json()
+
+  holdings = jsond['last_market_days_holdings']
+
+  tickers = []
+  for ticker in holdings:
+    tickers.append(ticker)
+
+  # Example format
+  # {
+  #   // key: ticker
+  #   "SPY": {
+  #     // key: days since linux epoch
+  #     // value: percent allocation of ticker on date
+  #     "19416": 0.123
+  #   }
+  # }
+  allocations = jsond['tdvm_weights']
+  date_range = pd.date_range(start=start_date, end=end_date)
+  df = pd.DataFrame(0.0, index=date_range, columns=tickers)
+
+  for ticker in allocations:
+      
+    for date_int in allocations[ticker]:
+      trading_date = convert_trading_date(date_int)
+      percent = allocations[ticker][date_int]
+
+      df.at[trading_date, ticker] = percent
+
+  return df
+
+
+def subtract_trading_days(start_date, trading_days=10):
+  trading_days = int(float(trading_days) * 1.1)
+
+  # Convert start_date to a datetime object if it's a string
+  if isinstance(start_date, str):
+    start_date = datetime.strptime(start_date, "%Y-%m-%d")
+  
+  days_subtracted = 0
+  while days_subtracted < trading_days:
+    start_date -= datetime.timedelta(days=1)  # Move back one day
+    if start_date.weekday() < 5:  # Monday to Friday are considered trading days (0 to 4)
+      days_subtracted += 1
+
+  return start_date
+
+
+symponies = [
+  #'HhMTavgzaIbD7rh7LM5D', # hwrdr - Master Switchboard
+  'wmDK13UrFbWbObhmnQLG',
+  'JgsHlLLVCwLBduSsxL4V', # hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
+  '08Kfs9P7LYH5I0IYuDLf',
+  'H9ORvJ20z0uk4wTVvRb1',
+  'M3vczEzxMOH5YYzMU4PT', # WT Specific
+  'wzDUjTZQGeLFCD7nYA9d', # Test Stdevr
+  'g9xMjPlQtnSzcINBaKgj', # Test MAR
+  '2epuaVyiooe5wGVxs1Ps', # Test Stdev
+  '87Sxtv9ZlYZfwVU7TwHq', # Test CR
+  'gGpTJO2qpzfEAXHgWciX', # Test EMA
+  'Fh0KTN40v0i6nCx26VWp', # Test MDD
+  'Wc26zCuOAQ3vXOXtAxor'
+]
+
+today = datetime.date.today()
+num_days = 10
+cache_data = {}
+
+for id in symponies:
+
+  definition = fetch_definition(id)
+  algo = parse(definition)
+  summary = preprocess(algo)
+
+  tickers = summary["assets"]
+
+  adjusted_start_date = subtract_trading_days(today, summary["max_window_days"] + num_days)
+
+  # end is exclusive [start, end) so we need to add an extra day
+  price_data = yf.download(" ".join(tickers), start=adjusted_start_date, end=(today + datetime.timedelta(days=1)), progress=False)
+
+  print(f"{definition['id']} / {definition['name']}")
+
+  range_start = price_data.index[0]
+  actual_start_date = price_data.index[-num_days]
+
+  actuals = fetch_backtest(id, actual_start_date, today)
+
+  date_range = pd.date_range(start=actual_start_date, end=today)
+  expected = pd.DataFrame().reindex_like(actuals)
+  for col in actuals.columns:
+    expected[col].values[:] = 0.0
+
+  for trading_date in price_data.index[-num_days:]:
+    allocation = allocate(algo, trading_date, price_data, cache_data)
+
+    for t in summary["investable_assets"]:
+      expected.at[trading_date, t] = allocation[t]
+
+  compare = expected.compare(actuals)
+
+  print("Expected\n", expected, "\n")
+  print("Actuals\n", actuals, "\n")
+  print("Diff\n", compare, "\n")
+
+  if not compare.empty:
+    if ("$USD", "other") in compare.columns and compare["$USD"]["other"].iloc[0] > 0:
+      total = 0.0
+      for ticker, table in compare.columns:
+        if table == "self" and ticker != "$USD":
+          total = total + compare[ticker]["self"].iloc[0]
+
+      if compare["$USD"]["other"].iloc[0] != (1.0 - total):
+        continue
+    
+    margin = 0.002
+    found = False
+    for d in compare.index:
+      size = int(len(compare.columns) / 2)
+      for idx in range(0, size):
+        ticker = compare.columns[idx * 2][0]
+
+        self_val = compare[ticker]["self"][d]
+        other_val = compare[ticker]["other"][d]
+
+        delta = abs(self_val - other_val)
+        if delta >= margin:
+          found = True
+          print(f"Delta {delta} was outside of the margin of error")
+        elif delta > 0.0:
+          print(f"Delta {delta} was within the margin of error")
+
+    if not found:
+      continue
+
+    print("Issues found")
+    exit()
+
+print("No issues found")
+
+
+
+
+
+
