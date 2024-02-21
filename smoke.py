@@ -1,12 +1,11 @@
 import warnings
 import datetime
-import requests
+import pandas as pd
 import yfinance as yf
-from src.parse import parse
-from src.allocate import allocate, preprocess
 import src.composer as composer
 import src.utils as utils
-import pandas as pd
+from src.allocate import allocate, preprocess
+from src.parse import parse
 
 warnings.filterwarnings(
     "ignore",

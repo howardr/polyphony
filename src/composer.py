@@ -1,6 +1,6 @@
 import datetime
-import requests
 import pandas as pd
+import requests
 
 def fetch_definition(id):
   url = f"https://backtest-api.composer.trade/api/v1/public/symphonies/{id}/score"

@@ -1,10 +1,8 @@
-import pytest
-from unittest.mock import MagicMock
-from unittest.mock import Mock
-from unittest.mock import patch
 import datetime
 import pandas as pd
 import pandas_ta as ta
+import pytest
+from unittest.mock import MagicMock, Mock, patch
 from allocate import allocate, run_indicator
 
 def test_allocate():

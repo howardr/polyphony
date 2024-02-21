@@ -1,7 +1,7 @@
 import datetime
-from collections import defaultdict
 import pandas as pd
 import pandas_ta as ta
+from collections import defaultdict
 
 def allocate(block, date, price_data, cache_data=None):
   if cache_data is None:

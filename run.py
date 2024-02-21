@@ -1,13 +1,11 @@
 import warnings
 import datetime
-import random
+import pandas as pd
 import yfinance as yf
-from src.parse import parse
-from src.allocate import allocate, preprocess
 import src.composer as composer
 import src.utils as utils
-import pandas as pd
-import sys
+from src.allocate import allocate, preprocess
+from src.parse import parse
 
 warnings.filterwarnings(
     "ignore",
