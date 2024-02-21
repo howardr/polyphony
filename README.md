@@ -8,7 +8,7 @@ from src.allocate import allocate
 
 # if current price of SPY is > 200d moving average of SPY, buy $SPY, otherwise buy $BIL
 algo = ['ifelse',
-  ['gt', ['now', 'SPY'], ['ma', 'SPY', 200]],
+  ['gt', ['now', ['asset', 'SPY']], ['ma', ['asset', 'SPY'], 200]]  ,
   ['asset', 'TQQQ'],
   ['asset', 'BIL']
 ]

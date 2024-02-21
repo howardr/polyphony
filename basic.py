@@ -1,7 +1,7 @@
 import datetime
 import yfinance as yf
 import src.utils as utils
-from src.allocate import allocate, preprocess
+from src.allocate import allocate
 
 # if current price of SPY is > 200d moving average of SPY, buy $SPY, otherwise buy $BIL
 algo = ['ifelse',
