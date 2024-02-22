@@ -140,6 +140,24 @@ def test_allocate_indicator_cr():
   assert rhs == ((125 / 100) -1) * 100
   assert lhs < rhs
 
+def test_allocate_indicator_mar():
+  date = pd.to_datetime('2023-01-06')
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): [100, 105, 110, 115, 120, 125],
+  }, index=pd.date_range('2023-01-01', periods=6))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  indicator = ('mar', ('asset', 'SPY'), 2)
+  mar = run_indicator(indicator, date, price_data)
+
+  pct_returns = [
+    (120.0 / 115.0) - 1.0,
+    (125.0 / 120.0) - 1.0
+  ]
+  expected = (sum(pct_returns) / len(pct_returns)) * 100
+
+  assert mar == expected
+
 # @patch('allocate_module.cr')
 # def test_allocate_filter_top_assets(mock_cr):
 #   date = datetime.date(2024, 2, 6)
