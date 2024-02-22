@@ -1,5 +1,8 @@
+matplotlib
+numpy
 pandas==2.2.0
 pandas_ta==0.3.14b0
 pytest==8.0.0
 Requests==2.31.0
+seaborn
 yfinance==0.2.36
