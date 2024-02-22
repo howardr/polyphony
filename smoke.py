@@ -27,7 +27,7 @@ symponies = [
   '87Sxtv9ZlYZfwVU7TwHq', # Test CR
   'gGpTJO2qpzfEAXHgWciX', # Test EMA
   'Fh0KTN40v0i6nCx26VWp', # Test MDD
-  'Wc26zCuOAQ3vXOXtAxor'
+  #'Wc26zCuOAQ3vXOXtAxor'
 ]
 
 today = datetime.date.today()
@@ -94,9 +94,9 @@ for id in symponies:
         delta = abs(self_val - other_val)
         if delta >= margin:
           found = True
-          print(f"Delta {delta} was outside of the margin of error")
+          print(f"{d}: {ticker} delta {delta} was outside of the margin of error")
         elif delta > 0.0:
-          print(f"Delta {delta} was within the margin of error")
+          print(f"{d}: {ticker} delta {delta} was within the margin of error")
 
     if not found:
       continue
