@@ -1,3 +1,21 @@
+# Polyphony
+
+Simple framework for portfoliio rebalancing and backtesting.
+
+## Goals and Use Cases
+
+- **Synthetic and Alternative Data.** Enable Monte Carlo simulations. Feed in simulated data to play out different scenarios. Use alternate pricing (e.g., historical Bitcoin prices) instead of newer BTC ETFs to conduct older backtests.
+
+- **Generative Strategies.** Take a strategy framework (e.g., 200-day SMA > current price) and test it against thousands of tickers.
+
+- **Strategy Variable Optimizations.** Optimize indicator variables by generating many combinations of inputs. For example, compare the performance of RSI 10-60 days > 60-80%.
+
+- **Archiving and Backup.** Save and store algorithms "offline" as a disaster recovery strategy.
+
+- **Workflow Automation / Switchboard Building.** Create Symphony JSON to use as a switchboard for multiple Symphony URLs. "Mute" branches instead of swapping BIL in/out to test different branches.
+
+- **Observability, Debugging, and Tracing.** See what assets will be chosen given a scenario, what branches were selected to generate an allocation, and what calculations were made for an indicator.
+
 # Example
 
 ```python
