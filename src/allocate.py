@@ -49,7 +49,7 @@ def allocate(block, date, price_data, cache_data=None):
       false_block = block[3]
 
       eval_block = None  
-      if run_comparator(comparator, date, price_data):
+      if run_comparator(comparator, date, price_data, cache_data):
         eval_block = true_block
       else:
         eval_block = false_block
@@ -67,31 +67,31 @@ def allocate(block, date, price_data, cache_data=None):
         case "cr": 
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(cr(b, date, window_days, price_data))
+            values.append(cr(b, date, window_days, price_data, cache_data))
         case "ma":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(ma(b, date, window_days, price_data))
+            values.append(ma(b, date, window_days, price_data, cache_data))
         case "mar":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(mar(b, date, window_days, price_data))
+            values.append(mar(b, date, window_days, price_data, cache_data))
         case "mdd":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(mdd(b, date, window_days, price_data))
+            values.append(mdd(b, date, window_days, price_data, cache_data))
         case "rsi":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(rsi(b, date, window_days, price_data))
+            values.append(rsi(b, date, window_days, price_data, cache_data))
         case "stdev":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(stdev(b, date, window_days, price_data))
+            values.append(stdev(b, date, window_days, price_data, cache_data))
         case "stdevr":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(stdevr(b, date, window_days, price_data))
+            values.append(stdevr(b, date, window_days, price_data, cache_data))
         case _:
           raise ValueError(f"'{sort_indicator_op}' is not a defined filter sort")
 
@@ -128,12 +128,12 @@ def allocate(block, date, price_data, cache_data=None):
     case _:
       raise ValueError(f"'{block_type}' is not a defined block")
 
-def run_comparator(comparator, date, price_data):
+def run_comparator(comparator, date, price_data, cache_data=None):
   op = comparator[0]
 
   # indicators
-  lhs = run_indicator(comparator[1], date, price_data)
-  rhs = run_indicator(comparator[2], date, price_data)
+  lhs = run_indicator(comparator[1], date, price_data, cache_data)
+  rhs = run_indicator(comparator[2], date, price_data, cache_data)
 
   match op:
     case "gt":
@@ -147,37 +147,37 @@ def run_comparator(comparator, date, price_data):
     case _:
       raise ValueError(f"'{op}' is not a defined comparator")
 
-def run_indicator(indicator, date, price_data):
+def run_indicator(indicator, date, price_data, cache_data=None):
   op = indicator[0]
   block = indicator[1]
 
   match op:
     case "now":
-      return now(block, date, price_data)
+      return now(block, date, price_data, cache_data)
     case "cr":
       window_days = indicator[2]
-      return cr(block, date, window_days, price_data)
+      return cr(block, date, window_days, price_data, cache_data)
     case "ema":
       window_days = indicator[2]
-      return ema(block, date, window_days, price_data)
+      return ema(block, date, window_days, price_data, cache_data)
     case "ma":
       window_days = indicator[2]
-      return ma(block, date, window_days, price_data)
+      return ma(block, date, window_days, price_data, cache_data)
     case "mar":
       window_days = indicator[2]
-      return mar(block, date, window_days, price_data)
+      return mar(block, date, window_days, price_data, cache_data)
     case "mdd":
       window_days = indicator[2]
-      return mdd(block, date, window_days, price_data)
+      return mdd(block, date, window_days, price_data, cache_data)
     case "rsi":
       window_days = indicator[2]
-      return rsi(block, date, window_days, price_data)
+      return rsi(block, date, window_days, price_data, cache_data)
     case "stdev":
       window_days = indicator[2]
-      return stdev(block, date, window_days, price_data)
+      return stdev(block, date, window_days, price_data, cache_data)
     case "stdevr":
       window_days = indicator[2]
-      return stdevr(block, date, window_days, price_data)
+      return stdevr(block, date, window_days, price_data, cache_data)
     case "number":
       return float(indicator[1])
     case _:
@@ -237,6 +237,11 @@ def mdd(block, date, window_days, price_data, cache_data=None):
   return percent
 
 def rsi(block, date, window_days, price_data, cache_data=None):
+
+  cache_key = f"rsi_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+
   # "They use a 250 day lookback period (i.e. smoothing/warmup)" - @JasonKoz
   # https://discord.com/channels/1018958699991138386/1019589796802351106/1191042469262012416
   lookback_days = 250
@@ -247,6 +252,9 @@ def rsi(block, date, window_days, price_data, cache_data=None):
   df = pd.DataFrame({'Close': prices})
   rsi = ta.rsi(df['Close'], length=window_days)[df.index[-1]]
   
+  if cache_data is not None:
+    cache_data[cache_key] = rsi
+
   return rsi
 
 def stdev(block, date, window_days, price_data, cache_data=None):
@@ -267,6 +275,10 @@ def stdevr(block, date, window_days, price_data, cache_data=None):
   return percent
 
 def price_history(block, date, days, price_data, cache_data=None):
+  cache_key = f"price_history_{block}_{date}_{days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+
   # use dates of trading data to find days
   range_end_index = price_data.index.get_loc(date)
   range_start_index = max(0, range_end_index - (days-1))
@@ -314,6 +326,9 @@ def price_history(block, date, days, price_data, cache_data=None):
 
     values.append(value)
     portfolio = new_portfolio
+
+  if cache_data is not None:
+    cache_data[cache_key] = values
 
   return values
 
