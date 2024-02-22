@@ -80,7 +80,7 @@ for id in symponies:
 
       if compare["$USD"]["other"].iloc[0] != (1.0 - total):
         continue
-    
+
     margin = 0.002
     found = False
     for d in compare.index:
