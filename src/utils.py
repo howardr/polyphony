@@ -1,6 +1,6 @@
 import datetime
 
-def subtract_trading_days(start_date, trading_days=10, fuzz=1.1):
+def subtract_trading_days(start_date, trading_days=10, fuzz=1.15):
   trading_days = int(float(trading_days) * fuzz)
 
   # Convert start_date to a datetime object if it's a string
