@@ -148,6 +148,7 @@ def run_comparator(comparator, date, price_data, cache_data=None):
       raise ValueError(f"'{op}' is not a defined comparator")
 
 def run_indicator(indicator, date, price_data, cache_data=None):
+
   op = indicator[0]
   block = indicator[1]
 
@@ -156,42 +157,50 @@ def run_indicator(indicator, date, price_data, cache_data=None):
       return now(block, date, price_data, cache_data)
     case "cr":
       window_days = indicator[2]
-      return cr(block, date, window_days, price_data, cache_data)
+      return run_cacheable_indicator(cr, block, date, window_days, price_data, cache_data)
     case "ema":
       window_days = indicator[2]
-      return ema(block, date, window_days, price_data, cache_data)
+      return run_cacheable_indicator(ema, block, date, window_days, price_data, cache_data)
     case "ma":
       window_days = indicator[2]
-      return ma(block, date, window_days, price_data, cache_data)
+      return run_cacheable_indicator(ma, block, date, window_days, price_data, cache_data)
     case "mar":
       window_days = indicator[2]
-      return mar(block, date, window_days, price_data, cache_data)
+      return run_cacheable_indicator(mar, block, date, window_days, price_data, cache_data)
     case "mdd":
       window_days = indicator[2]
-      return mdd(block, date, window_days, price_data, cache_data)
+      return run_cacheable_indicator(mdd, block, date, window_days, price_data, cache_data)
     case "rsi":
       window_days = indicator[2]
-      return rsi(block, date, window_days, price_data, cache_data)
+      return run_cacheable_indicator(rsi, block, date, window_days, price_data, cache_data)
     case "stdev":
       window_days = indicator[2]
-      return stdev(block, date, window_days, price_data, cache_data)
+      return run_cacheable_indicator(stdev, block, date, window_days, price_data, cache_data)
     case "stdevr":
       window_days = indicator[2]
-      return stdevr(block, date, window_days, price_data, cache_data)
+      return run_cacheable_indicator(stdevr, block, date, window_days, price_data, cache_data)
     case "number":
       return float(indicator[1])
     case _:
       raise ValueError(f"'{op}' is not a defined indicator")
+
+def run_cacheable_indicator(indicator_fn, block, date, window_days, price_data, cache_data=None):
+  cache_key = f"{indicator_fn.__name__}_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+
+  value = indicator_fn(block, date, window_days, price_data, cache_data)
+
+  if cache_data is not None:
+    cache_data[cache_key] = value
+
+  return value
 
 def now(block, date, price_data, cache_data=None):
   prices = price_history(block, date, 1, price_data, cache_data)
   return prices[-1]
 
 def cr(block, date, window_days, price_data, cache_data=None):
-  cache_key = f"cr_{block}_{date}_{window_days}"
-  if cache_data is not None and cache_key in cache_data:
-    return cache_data[cache_key]
-
   offset = window_days+1
   prices = price_history(block, date, offset, price_data, cache_data)
 
@@ -201,47 +210,26 @@ def cr(block, date, window_days, price_data, cache_data=None):
   #  how comparsons are made
   percent = cr * 100
 
-  if cache_data is not None:
-    cache_data[cache_key] = percent
-
   return percent
 
 def ema(block, date, window_days, price_data, cache_data=None):
-  cache_key = f"ema_{block}_{date}_{window_days}"
-  if cache_data is not None and cache_key in cache_data:
-    return cache_data[cache_key]
-
   prices = price_history(block, date, window_days * 2, price_data, cache_data)
 
   df = pd.DataFrame({'Close': prices})
   ema = ta.ema(df['Close'], length=window_days)
   value = ema[df.index[-1]]
 
-  if cache_data is not None:
-    cache_data[cache_key] = value
-
   return value
 
 def ma(block, date, window_days, price_data, cache_data=None):
-  cache_key = f"ma_{block}_{date}_{window_days}"
-  if cache_data is not None and cache_key in cache_data:
-    return cache_data[cache_key]
-  
   prices = price_history(block, date, window_days, price_data, cache_data)
 
   # this isn't really "moving," but I get why we are calling it that
   ma = sum(prices) / float(len(prices))
 
-  if cache_data is not None:
-    cache_data[cache_key] = ma
-
   return ma
 
 def mar(block, date, window_days, price_data, cache_data=None):
-  cache_key = f"mar_{block}_{date}_{window_days}"
-  if cache_data is not None and cache_key in cache_data:
-    return cache_data[cache_key]
-  
   prices = price_history(block, date, window_days+1, price_data, cache_data)
 
   df = pd.DataFrame({'Close': prices})
@@ -250,16 +238,9 @@ def mar(block, date, window_days, price_data, cache_data=None):
   # convert to % to normalize how comparsons are made
   percent = ma[df.index[-1]] * 100
 
-  if cache_data is not None:
-    cache_data[cache_key] = percent
-
   return percent
 
 def mdd(block, date, window_days, price_data, cache_data=None):
-  cache_key = f"mdd_{block}_{date}_{window_days}"
-  if cache_data is not None and cache_key in cache_data:
-    return cache_data[cache_key]
-  
   prices = price_history(block, date, window_days, price_data, cache_data)
 
   df = pd.DataFrame({'Close': prices})
@@ -268,16 +249,9 @@ def mdd(block, date, window_days, price_data, cache_data=None):
   # convert to % to normalize how comparsons are made
   percent = dd * 100
 
-  if cache_data is not None:
-    cache_data[cache_key] = percent
-
   return percent
 
 def rsi(block, date, window_days, price_data, cache_data=None):
-  cache_key = f"rsi_{block}_{date}_{window_days}"
-  if cache_data is not None and cache_key in cache_data:
-    return cache_data[cache_key]
-
   # "They use a 250 day lookback period (i.e. smoothing/warmup)" - @JasonKoz
   # https://discord.com/channels/1018958699991138386/1019589796802351106/1191042469262012416
   lookback_days = 250
@@ -287,40 +261,23 @@ def rsi(block, date, window_days, price_data, cache_data=None):
   # convert to DataFrame and run rsi method
   df = pd.DataFrame({'Close': prices})
   rsi = ta.rsi(df['Close'], length=window_days)[df.index[-1]]
-  
-  if cache_data is not None:
-    cache_data[cache_key] = rsi
 
   return rsi
 
 def stdev(block, date, window_days, price_data, cache_data=None):
-  cache_key = f"stdev_{block}_{date}_{window_days}"
-  if cache_data is not None and cache_key in cache_data:
-    return cache_data[cache_key]
-
   prices = price_history(block, date, window_days, price_data, cache_data)
   df = pd.DataFrame({'Close': prices})
   std = df['Close'].std()
   
-  if cache_data is not None:
-    cache_data[cache_key] = std
-
   return std
 
 def stdevr(block, date, window_days, price_data, cache_data=None):
-  cache_key = f"stdevr_{block}_{date}_{window_days}"
-  if cache_data is not None and cache_key in cache_data:
-    return cache_data[cache_key]
-
   prices = price_history(block, date, window_days+1, price_data, cache_data)
   df = pd.DataFrame({'Close': prices})
   std = df['Close'].pct_change()[1:].std()
 
   # convert to % to normalize how comparsons are made
   percent = std * 100
-
-  if cache_data is not None:
-    cache_data[cache_key] = percent
 
   return percent
 
