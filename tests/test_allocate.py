@@ -158,6 +158,22 @@ def test_allocate_indicator_mar():
 
   assert mar == expected
 
+def test_allocate_indicator_caching_correct_values():
+  date = pd.to_datetime('2023-01-06')
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): [100, 105, 110, 115, 120, 125],
+  }, index=pd.date_range('2023-01-01', periods=6))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  ops = ["cr", "ema", "ma", "mar", "mdd", "rsi", "stdev", "stdevr"]
+  for op in ops:
+    indicator = (op, ('asset', 'SPY'), 3)
+    cache_data = {}
+    uncached = run_indicator(indicator, date, price_data, cache_data)
+    cached = run_indicator(indicator, date, price_data, cache_data)
+
+    assert uncached == cached
+
 # @patch('allocate_module.cr')
 # def test_allocate_filter_top_assets(mock_cr):
 #   date = datetime.date(2024, 2, 6)

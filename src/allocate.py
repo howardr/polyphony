@@ -188,33 +188,60 @@ def now(block, date, price_data, cache_data=None):
   return prices[-1]
 
 def cr(block, date, window_days, price_data, cache_data=None):
+  cache_key = f"cr_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+
   offset = window_days+1
   prices = price_history(block, date, offset, price_data, cache_data)
 
   cr = (prices[-1] / prices[-offset]) - 1
 
-  # convert to % to normalize how comparsons are made
+  # convert to % to normalize
+  #  how comparsons are made
   percent = cr * 100
+
+  if cache_data is not None:
+    cache_data[cache_key] = percent
 
   return percent
 
 def ema(block, date, window_days, price_data, cache_data=None):
+  cache_key = f"ema_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+
   prices = price_history(block, date, window_days * 2, price_data, cache_data)
 
   df = pd.DataFrame({'Close': prices})
   ema = ta.ema(df['Close'], length=window_days)
+  value = ema[df.index[-1]]
 
-  return  ema[df.index[-1]]
+  if cache_data is not None:
+    cache_data[cache_key] = value
+
+  return value
 
 def ma(block, date, window_days, price_data, cache_data=None):
+  cache_key = f"ma_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+  
   prices = price_history(block, date, window_days, price_data, cache_data)
 
   # this isn't really "moving," but I get why we are calling it that
   ma = sum(prices) / float(len(prices))
 
+  if cache_data is not None:
+    cache_data[cache_key] = ma
+
   return ma
 
 def mar(block, date, window_days, price_data, cache_data=None):
+  cache_key = f"mar_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+  
   prices = price_history(block, date, window_days+1, price_data, cache_data)
 
   df = pd.DataFrame({'Close': prices})
@@ -223,9 +250,16 @@ def mar(block, date, window_days, price_data, cache_data=None):
   # convert to % to normalize how comparsons are made
   percent = ma[df.index[-1]] * 100
 
+  if cache_data is not None:
+    cache_data[cache_key] = percent
+
   return percent
 
 def mdd(block, date, window_days, price_data, cache_data=None):
+  cache_key = f"mdd_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+  
   prices = price_history(block, date, window_days, price_data, cache_data)
 
   df = pd.DataFrame({'Close': prices})
@@ -234,10 +268,12 @@ def mdd(block, date, window_days, price_data, cache_data=None):
   # convert to % to normalize how comparsons are made
   percent = dd * 100
 
+  if cache_data is not None:
+    cache_data[cache_key] = percent
+
   return percent
 
 def rsi(block, date, window_days, price_data, cache_data=None):
-
   cache_key = f"rsi_{block}_{date}_{window_days}"
   if cache_data is not None and cache_key in cache_data:
     return cache_data[cache_key]
@@ -258,19 +294,33 @@ def rsi(block, date, window_days, price_data, cache_data=None):
   return rsi
 
 def stdev(block, date, window_days, price_data, cache_data=None):
+  cache_key = f"stdev_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+
   prices = price_history(block, date, window_days, price_data, cache_data)
   df = pd.DataFrame({'Close': prices})
   std = df['Close'].std()
   
+  if cache_data is not None:
+    cache_data[cache_key] = std
+
   return std
 
 def stdevr(block, date, window_days, price_data, cache_data=None):
+  cache_key = f"stdevr_{block}_{date}_{window_days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+
   prices = price_history(block, date, window_days+1, price_data, cache_data)
   df = pd.DataFrame({'Close': prices})
   std = df['Close'].pct_change()[1:].std()
 
   # convert to % to normalize how comparsons are made
   percent = std * 100
+
+  if cache_data is not None:
+    cache_data[cache_key] = percent
 
   return percent
 
