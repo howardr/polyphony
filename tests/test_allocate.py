@@ -174,6 +174,27 @@ def test_allocate_indicator_caching_correct_values():
 
     assert uncached == cached
 
+def test_allocate_coerce_datetime():
+  date = datetime.date(2023, 1, 6)
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): [100, 105, 110, 115, 120, 125],
+  }, index=pd.date_range('2023-01-01', periods=6))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  expected = {
+    'SPY': 1.0
+  }
+
+  ops = ["cr", "ema", "ma", "mar", "mdd", "rsi", "stdev", "stdevr"]
+  for op in ops:
+    actual = allocate(('ifelse',
+      ('gt', (op, ['asset', 'SPY'], 3), ['number', -100.0]), # using -100 to make sure this alwasy evaluates as true
+      ['asset', 'SPY'],
+      ['asset', 'BIL']
+    ), date, price_data)
+
+    assert actual == expected
+
 # @patch('allocate_module.cr')
 # def test_allocate_filter_top_assets(mock_cr):
 #   date = datetime.date(2024, 2, 6)

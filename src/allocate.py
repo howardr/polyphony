@@ -282,6 +282,8 @@ def stdevr(block, date, window_days, price_data, cache_data=None):
   return percent
 
 def price_history(block, date, days, price_data, cache_data=None):
+  date = pd.to_datetime(date)
+
   cache_key = f"price_history_{block}_{date}_{days}"
   if cache_data is not None and cache_key in cache_data:
     return cache_data[cache_key]
