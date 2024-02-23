@@ -30,7 +30,9 @@ symponies = [
   #'Wc26zCuOAQ3vXOXtAxor'
 ]
 
-today = datetime.date.today()
+# using "yesterday" to avoid getting intraday price data
+# if this is called during market hours
+yesterday = datetime.date.today() + datetime.timedelta(days=-1)
 num_days = 10
 cache_data = {}
 
@@ -42,19 +44,20 @@ for id in symponies:
 
   tickers = summary["assets"]
 
-  adjusted_start_date = utils.subtract_trading_days(today, summary["max_window_days"] + num_days)
+  adjusted_start_date = utils.subtract_trading_days(yesterday, summary["max_window_days"] + num_days)
 
   # end is exclusive [start, end) so we need to add an extra day
-  price_data = yf.download(" ".join(tickers), start=adjusted_start_date, end=(today + datetime.timedelta(days=1)), progress=False)
+  price_data = yf.download(" ".join(tickers), start=adjusted_start_date, end=(yesterday + datetime.timedelta(days=1)), progress=False)
 
   print(f"{definition['id']} / {definition['name']}")
 
   range_start = price_data.index[0]
+  range_end = price_data.index[-1]
   actual_start_date = price_data.index[-num_days]
 
-  actuals = composer.fetch_backtest(id, actual_start_date, today)
+  actuals = composer.fetch_backtest(id, actual_start_date, range_end)
 
-  date_range = pd.date_range(start=actual_start_date, end=today)
+  date_range = pd.date_range(start=actual_start_date, end=range_end)
   expected = pd.DataFrame().reindex_like(actuals)
   for col in actuals.columns:
     expected[col].values[:] = 0.0
