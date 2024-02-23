@@ -195,38 +195,30 @@ def test_allocate_coerce_datetime():
 
     assert actual == expected
 
-# @patch('allocate_module.cr')
-# def test_allocate_filter_top_assets(mock_cr):
-#   date = datetime.date(2024, 2, 6)
-#   stock_data = None
+def test_allocate_filter_top_assets():
+  date = datetime.date(2023, 1, 2)
 
-#   expected = {
-#     'asset2': 0.5,
-#     'asset3': 0.5,
-#   }
-  
-#   def fake_cr(block, date, days, price_data):
-#     ticker = block[1]
-#     match ticker:
-#       case "asset1":
-#         return 0.10
-#       case "asset2":
-#         return 0.20
-#       case "asset3":
-#         return 0.30
-#       case _:
-#         raise Exception(f"umocked asset '{str(fake_cr)}'")
-  
-#   mock_cr.side_effect = fake_cr
+  # todo: figure out what happens if there is a "tie" in a sort
+  price_data = pd.DataFrame({
+    ('Adj Close', 'asset1'): [80, 75],
+    ('Adj Close', 'asset2'): [120, 125],
+    ('Adj Close', 'asset3'): [140, 200],
+  }, index=pd.date_range('2023-01-01', periods=2))
+  price_data.columns.names = ['Price', 'Ticker']
 
-#   result = allocate_module.allocate(('filter',
-#     (
-#       ('asset', 'asset1'),
-#       ('asset', 'asset2'),
-#       ('asset', 'asset3'),
-#     ),
-#     ('cr', 1),
-#     ('top', 2)
-#   ), date, stock_data)
+  expected = {
+    'asset2': 0.5,
+    'asset3': 0.5,
+  }
 
-#   assert result == expected
+  result = allocate(('filter',
+    (
+      ('asset', 'asset1'),
+      ('asset', 'asset2'),
+      ('asset', 'asset3'),
+    ),
+    ('cr', 1),
+    ('top', 2)
+  ), date, price_data)
+
+  assert result == expected
