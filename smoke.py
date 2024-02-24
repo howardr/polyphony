@@ -8,25 +8,25 @@ from src.allocate import allocate, preprocess
 from src.parse import parse
 
 warnings.filterwarnings(
-    "ignore",
-    message="The 'unit' keyword in TimedeltaIndex construction is deprecated",
-    category=FutureWarning,
-    module="yfinance",
+  "ignore",
+  message="The 'unit' keyword in TimedeltaIndex construction is deprecated",
+  category=FutureWarning,
+  module="yfinance",
 )
 
 symponies = [
   #'HhMTavgzaIbD7rh7LM5D', # hwrdr - Master Switchboard
-  'wmDK13UrFbWbObhmnQLG',
-  'JgsHlLLVCwLBduSsxL4V', # hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
-  '08Kfs9P7LYH5I0IYuDLf',
-  'H9ORvJ20z0uk4wTVvRb1',
-  'M3vczEzxMOH5YYzMU4PT', # WT Specific
-  'wzDUjTZQGeLFCD7nYA9d', # Test Stdevr
-  'g9xMjPlQtnSzcINBaKgj', # Test MAR
-  '2epuaVyiooe5wGVxs1Ps', # Test Stdev
-  '87Sxtv9ZlYZfwVU7TwHq', # Test CR
-  'gGpTJO2qpzfEAXHgWciX', # Test EMA
-  'Fh0KTN40v0i6nCx26VWp', # Test MDD
+  "wmDK13UrFbWbObhmnQLG",
+  "JgsHlLLVCwLBduSsxL4V",  # hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
+  "08Kfs9P7LYH5I0IYuDLf",
+  "H9ORvJ20z0uk4wTVvRb1",
+  "M3vczEzxMOH5YYzMU4PT",  # WT Specific
+  "wzDUjTZQGeLFCD7nYA9d",  # Test Stdevr
+  "g9xMjPlQtnSzcINBaKgj",  # Test MAR
+  "2epuaVyiooe5wGVxs1Ps",  # Test Stdev
+  "87Sxtv9ZlYZfwVU7TwHq",  # Test CR
+  "gGpTJO2qpzfEAXHgWciX",  # Test EMA
+  "Fh0KTN40v0i6nCx26VWp",  # Test MDD
   #'Wc26zCuOAQ3vXOXtAxor'
 ]
 
@@ -37,17 +37,23 @@ num_days = 10
 cache_data = {}
 
 for id in symponies:
-
   definition = composer.fetch_definition(id)
   algo = parse(definition)
   summary = preprocess(algo)
 
   tickers = summary["assets"]
 
-  adjusted_start_date = utils.subtract_trading_days(yesterday, summary["max_window_days"] + num_days)
+  adjusted_start_date = utils.subtract_trading_days(
+    yesterday, summary["max_window_days"] + num_days
+  )
 
   # end is exclusive [start, end) so we need to add an extra day
-  price_data = yf.download(" ".join(tickers), start=adjusted_start_date, end=(yesterday + datetime.timedelta(days=1)), progress=False)
+  price_data = yf.download(
+    " ".join(tickers),
+    start=adjusted_start_date,
+    end=(yesterday + datetime.timedelta(days=1)),
+    progress=False,
+  )
 
   print(f"{definition['id']} / {definition['name']}")
 
@@ -108,9 +114,3 @@ for id in symponies:
     exit()
 
 print("No issues found")
-
-
-
-
-
-

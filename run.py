@@ -8,17 +8,19 @@ from src.allocate import allocate, preprocess, price_history
 from src.parse import parse
 
 warnings.filterwarnings(
-    "ignore",
-    message="The 'unit' keyword in TimedeltaIndex construction is deprecated",
-    category=FutureWarning,
-    module="yfinance",
+  "ignore",
+  message="The 'unit' keyword in TimedeltaIndex construction is deprecated",
+  category=FutureWarning,
+  module="yfinance",
 )
 
 # Example symphony_id
 # Example respomse
 # https://app.composer.trade/symphony/wmDK13UrFbWbObhmnQLG/details
 # https://codebeautify.org/jsonviewer/y24e1177e
-symphony_id = 'wmDK13UrFbWbObhmnQLG' # hwrdr - TQQQ For The Long Term (Reddit Post Link)
+symphony_id = (
+  "wmDK13UrFbWbObhmnQLG"  # hwrdr - TQQQ For The Long Term (Reddit Post Link)
+)
 
 # Fetch and print the JSON data
 num_days = 10
@@ -31,7 +33,12 @@ summary = preprocess(algo)
 tickers = summary["assets"]
 
 start_date = utils.subtract_trading_days(date, summary["max_window_days"] + num_days)
-price_data = yf.download(" ".join(tickers), start=start_date, end=(date + datetime.timedelta(days=1)), progress=False)
+price_data = yf.download(
+  " ".join(tickers),
+  start=start_date,
+  end=(date + datetime.timedelta(days=1)),
+  progress=False,
+)
 
 range = price_data.index[-num_days:]
 df = pd.DataFrame(0.0, index=range, columns=tuple(summary["investable_assets"]))

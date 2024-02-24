@@ -1,0 +1,12 @@
+[tool.ruff]
+
+exclude = [
+ "examples"
+]
+
+indent-width = 2
+
+[format]
+
+quote-style = "double"
+indent-style = "spaces"

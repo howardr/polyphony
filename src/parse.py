@@ -1,14 +1,18 @@
-
 def parse(node):
   match node["step"]:
     case "root":
       # assumption that there can only be one child off of a root
       return parse(node["children"][0])
     case "wt-cash-equal":
-     return ("wteq", tuple(map(parse, node["children"])))
+      return ("wteq", tuple(map(parse, node["children"])))
     case "wt-cash-specified":
-     weights = tuple(map(lambda child: (float(child["weight"]["num"]), float(child["weight"]["den"])), node["children"]))
-     return ("wtspec", tuple(map(parse, node["children"])), weights)
+      weights = tuple(
+        map(
+          lambda child: (float(child["weight"]["num"]), float(child["weight"]["den"])),
+          node["children"],
+        )
+      )
+      return ("wtspec", tuple(map(parse, node["children"])), weights)
     case "wt-inverse-vol":
       return ("wtinvol", tuple(map(parse, node["children"])), int(node["window-days"]))
     case "if":
@@ -18,7 +22,7 @@ def parse(node):
       return ("ifelse", predicate(predicate_node), parse(true_node), parse(false_node))
     case "asset":
       ticker = f"{node['ticker']}"
-      return ('asset', ticker)
+      return ("asset", ticker)
     case "filter":
       blocks = tuple(map(parse, node["children"]))
 
@@ -37,6 +41,7 @@ def parse(node):
     case _:
       raise ValueError(f"'{node['step']}' is not a defined step")
 
+
 def predicate(node):
   comparator = node["comparator"]
   match comparator:
@@ -47,6 +52,7 @@ def predicate(node):
       return (comparator, indicator_lhs, indicator_rhs)
     case _:
       raise ValueError(f"'{comparator}' is not a defined predicate comparator")
+
 
 def indicator_fn(side, node):
   if f"{side}-fixed-value?" in node and node[f"{side}-fixed-value?"]:
@@ -75,19 +81,20 @@ def indicator_fn(side, node):
     case _:
       raise ValueError(f"'{attr}' is not a defined {side}-fn")
 
+
 def create_asset(ticker):
   return ("asset", ticker)
 
+
 def indicator_now(side, node):
-  indicator = node[f"{side}-fn"]
   ticker = node[f"{side}-val"]
 
   asset = create_asset(ticker)
 
   return ("now", asset)
 
+
 def indicator_with_window_days(op, side, node):
-  indicator = node[f"{side}-fn"]
   ticker = node[f"{side}-val"]
   days = None
 
@@ -100,12 +107,14 @@ def indicator_with_window_days(op, side, node):
 
   return (op, asset, int(days))
 
+
 def filter_select_fn(node):
   return (node["select-fn"], int(node["select-n"]))
 
+
 def filter_sort_indicator(node):
   attr = node["sort-by-fn"]
-  
+
   days = None
 
   if "sort-by-window-days" in node:

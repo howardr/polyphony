@@ -1,31 +1,32 @@
 import datetime
-import numpy as np
 import pandas as pd
 import seaborn as sns
 import yfinance as yf
 import src.utils as utils
 from itertools import product
 import matplotlib.pyplot as plt
-from src.allocate import allocate, cr, preprocess, price_history
+from src.allocate import cr, preprocess
+
 
 def generate_algo(days, gt_rsi_percent):
-  tqqq_or_not = ['ifelse',
-    ['gt', ['now', ['asset', 'SPY']], ['ma', ['asset', 'SPY'], 200]],
-
+  tqqq_or_not = [
+    "ifelse",
+    ["gt", ["now", ["asset", "SPY"]], ["ma", ["asset", "SPY"], 200]],
     # bull market
-    ['asset', 'TQQQ'],
-
+    ["asset", "TQQQ"],
     # bear market
-    ['asset', 'BIL'] 
+    ["asset", "BIL"],
   ]
 
-  overbought_wrapper = ['ifelse',
-    ['gt', ['rsi', ['asset', 'SPY'], days], ['number', gt_rsi_percent]],
-    ['asset', 'BIL'],
-    tqqq_or_not
+  overbought_wrapper = [
+    "ifelse",
+    ["gt", ["rsi", ["asset", "SPY"], days], ["number", gt_rsi_percent]],
+    ["asset", "BIL"],
+    tqqq_or_not,
   ]
 
   return overbought_wrapper
+
 
 date = datetime.date(2024, 2, 20)
 num_days = 500
@@ -45,26 +46,33 @@ for days, rsi_percent in combs:
 tickers = summary["assets"]
 
 price_start_date = utils.subtract_trading_days(date, max_window_days + num_days)
-price_data = yf.download(" ".join(tickers), start=price_start_date, end=(date + datetime.timedelta(days=1)), progress=False)
+price_data = yf.download(
+  " ".join(tickers),
+  start=price_start_date,
+  end=(date + datetime.timedelta(days=1)),
+  progress=False,
+)
 
 runs = zip(algos, combs)
 comb_stats = []
 cache_data = {}
 for algo, (days, gt_rsi_percent) in runs:
-  pct_return = cr(algo, pd.to_datetime(date), num_days, price_data, cache_data=cache_data)
+  pct_return = cr(
+    algo, pd.to_datetime(date), num_days, price_data, cache_data=cache_data
+  )
   comb_stats.append((days, gt_rsi_percent, pct_return))
 
   print(f"Days: {days}, GT RSI Percent: {gt_rsi_percent}, Percent Return: {pct_return}")
 
 # Convert list of tuples into a DataFrame
-df = pd.DataFrame(comb_stats, columns=['days', 'gt_rsi_percent', 'pct_return'])
+df = pd.DataFrame(comb_stats, columns=["days", "gt_rsi_percent", "pct_return"])
 
 # Correctly pivot the DataFrame
-pivot_table = df.pivot(index='days', columns='gt_rsi_percent', values='pct_return')
+pivot_table = df.pivot(index="days", columns="gt_rsi_percent", values="pct_return")
 
 # Plotting the heatmap
-sns.heatmap(pivot_table, cmap='viridis', annot=True)
-plt.title('Percent Returns Heatmap')
-plt.xlabel('GT RSI Percent')
-plt.ylabel('RSI Days')
+sns.heatmap(pivot_table, cmap="viridis", annot=True)
+plt.title("Percent Returns Heatmap")
+plt.xlabel("GT RSI Percent")
+plt.ylabel("RSI Days")
 plt.show()
