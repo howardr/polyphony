@@ -68,6 +68,10 @@ def allocate(block, date, price_data, cache_data=None):
           window_days = sort_indicator[1]
           for b in blocks:
             values.append(cr(b, date, window_days, price_data, cache_data))
+        case "ema":
+          window_days = sort_indicator[1]
+          for b in blocks:
+            values.append(ema(b, date, window_days, price_data, cache_data))
         case "ma":
           window_days = sort_indicator[1]
           for b in blocks:
@@ -238,7 +242,12 @@ def cr(block, date, window_days, price_data, cache_data=None):
 
 
 def ema(block, date, window_days, price_data, cache_data=None):
-  prices = price_history(block, date, window_days * 2, price_data, cache_data)
+  # todo: I don't think I need to double the window days to get the right number
+  num_days = window_days * 2
+  prices = price_history(block, date, num_days, price_data, cache_data)
+
+  if num_days > len(prices):
+    raise ValueError("Not enough data to calculate EMA")
 
   df = pd.DataFrame({"Close": prices})
   ema = ta.ema(df["Close"], length=window_days)
@@ -436,8 +445,6 @@ def preprocess(fn, investable=False):
       match sort_op:
         case "cr" | "mar" | "stdevr":
           sort_window_days = sort_window_days + 1
-        case "ema" | "mdd":
-          sort_window_days = sort_window_days * 2
         case "rsi":
           # rsi has a "warm up" period
           # that needs to be accounted for
@@ -472,7 +479,7 @@ def preprocess(fn, investable=False):
       match op:
         case "cr" | "mar" | "stdevr":
           window_days = window_days + 1
-        case "ema" | "mdd":
+        case "ema":
           window_days = window_days * 2
         case "rsi":
           # rsi has a "warm up" period

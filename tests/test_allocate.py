@@ -1,9 +1,12 @@
 import datetime
+import random
 import pandas as pd
 import pandas_ta as ta
 import pytest
-from unittest.mock import MagicMock, Mock, patch
 from allocate import allocate, run_indicator
+
+WINDOW_INDICATOR_TYPES = ["cr", "ema", "ma", "mar", "mdd", "rsi", "stdev", "stdevr"]
+ALL_INDICATOR_TYPES = ["now"] + WINDOW_INDICATOR_TYPES
 
 def test_allocate():
   assert True
@@ -123,6 +126,19 @@ def test_allocate_group_assets():
 
   assert result == expected
 
+def test_allocate_indicator_now():
+  date = pd.to_datetime('2023-01-06')
+  price_data = pd.DataFrame({
+    ('Adj Close', 'asset1'): [100, 105, 110, 115, 120, 125],
+  }, index=pd.date_range('2023-01-01', periods=6))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  indicator = ('now', ('asset', 'asset1'))
+  value = run_indicator(indicator, date, price_data)
+
+  assert value == 125
+
+
 def test_allocate_indicator_cr():
   date = pd.to_datetime('2023-01-06')
   price_data = pd.DataFrame({
@@ -139,6 +155,37 @@ def test_allocate_indicator_cr():
   assert lhs == ((125 / 120) -1) * 100
   assert rhs == ((125 / 100) -1) * 100
   assert lhs < rhs
+
+
+def test_allocate_indicator_ema():
+  date = pd.to_datetime('2023-01-06')
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): [100, 105, 110, 115, 120, 125],
+  }, index=pd.date_range('2023-01-01', periods=6))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  indicator = ('ema', ('asset', 'SPY'), 3)
+  ema = run_indicator(indicator, date, price_data)
+
+  df = pd.DataFrame({"Close": [115, 120, 125]})
+  expected = ta.ema(df["Close"], length=3)
+
+  assert ema == expected[df.index[-1]]
+
+
+def test_allocate_indicator_ma():
+  date = pd.to_datetime('2023-01-05')
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): [100, 105, 110, 115, 120, 125],
+  }, index=pd.date_range('2023-01-01', periods=6))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  indicator = ('ma', ('asset', 'SPY'), 2)
+  ma = run_indicator(indicator, date, price_data)
+
+  expected = (115 + 120) / 2
+
+  assert ma == expected
 
 def test_allocate_indicator_mar():
   date = pd.to_datetime('2023-01-06')
@@ -158,6 +205,86 @@ def test_allocate_indicator_mar():
 
   assert mar == expected
 
+def test_allocate_indicator_mdd():
+  date = pd.to_datetime('2023-01-09')
+
+  prices = [100, 105, 90, 95, 80, 110, 90, 120, 125]
+
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): prices,
+  }, index=pd.date_range('2023-01-01', periods=9))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  indicator = ('mdd', ('asset', 'SPY'), 9)
+  mdd = run_indicator(indicator, date, price_data)
+
+  expected = ((105 - 80) / 105) * 100
+
+  # rounding bc they seem to be off by a tiny bit
+  assert round(mdd, 3) == round(expected, 3)
+
+
+def test_allocate_indicator_rsi():
+  window_days = 6
+  lookback = 250
+  periods = window_days + lookback
+  prices = [random.uniform(90.0, 150.0) for _ in range(periods)]
+
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): prices,
+  }, index=pd.date_range('2023-01-01', periods=periods))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  end_date = price_data.index[-1]
+
+  indicator = ('rsi', ('asset', 'SPY'), window_days)
+  rsi = run_indicator(indicator, end_date, price_data)
+
+  df = pd.DataFrame({"Close": prices})
+  expected = ta.rsi(df["Close"], length=window_days)[df.index[-1]]
+
+  assert rsi == expected
+
+
+def test_allocate_indicator_stdev():
+  date = pd.to_datetime('2023-01-06')
+
+  prices = [95, 80, 110, 90, 120, 125]
+
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): prices,
+  }, index=pd.date_range('2023-01-01', periods=6))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  indicator = ('stdev', ('asset', 'SPY'), 6)
+  std = run_indicator(indicator, date, price_data)
+
+  df = pd.DataFrame({"Close": prices})
+  expected = df["Close"].std()
+
+  assert std == expected
+
+
+def test_allocate_indicator_stdevr():
+  date = pd.to_datetime('2023-01-08')
+  window_days = 6
+
+  prices = [200, 100, 95, 80, 110, 90, 120, 125]
+
+  price_data = pd.DataFrame({
+    ('Adj Close', 'SPY'): prices,
+  }, index=pd.date_range('2023-01-01', periods=8))
+  price_data.columns.names = ['Price', 'Ticker']
+
+  indicator = ('stdevr', ('asset', 'SPY'), window_days)
+  std = run_indicator(indicator, date, price_data)
+
+  df = pd.DataFrame({"Close": prices})
+  expected = df["Close"].pct_change()[-window_days:].std() * 100
+
+  assert std == expected
+
+
 def test_allocate_indicator_caching_correct_values():
   date = pd.to_datetime('2023-01-06')
   price_data = pd.DataFrame({
@@ -165,9 +292,8 @@ def test_allocate_indicator_caching_correct_values():
   }, index=pd.date_range('2023-01-01', periods=6))
   price_data.columns.names = ['Price', 'Ticker']
 
-  ops = ["cr", "ema", "ma", "mar", "mdd", "rsi", "stdev", "stdevr"]
-  for op in ops:
-    indicator = (op, ('asset', 'SPY'), 3)
+  for indicator_type in WINDOW_INDICATOR_TYPES:
+    indicator = (indicator_type, ('asset', 'SPY'), 3)
     cache_data = {}
     uncached = run_indicator(indicator, date, price_data, cache_data)
     cached = run_indicator(indicator, date, price_data, cache_data)
@@ -185,10 +311,9 @@ def test_allocate_coerce_datetime():
     'SPY': 1.0
   }
 
-  ops = ["cr", "ema", "ma", "mar", "mdd", "rsi", "stdev", "stdevr"]
-  for op in ops:
+  for indicator_type in WINDOW_INDICATOR_TYPES:
     actual = allocate(('ifelse',
-      ('gt', (op, ['asset', 'SPY'], 3), ['number', -100.0]), # using -100 to make sure this alwasy evaluates as true
+      ('gt', (indicator_type, ['asset', 'SPY'], 3), ['number', -100.0]), # using -100 to make sure this alwasy evaluates as true
       ['asset', 'SPY'],
       ['asset', 'BIL']
     ), date, price_data)
@@ -206,19 +331,40 @@ def test_allocate_filter_top_assets():
   }, index=pd.date_range('2023-01-01', periods=2))
   price_data.columns.names = ['Price', 'Ticker']
 
-  expected = {
-    'asset2': 0.5,
-    'asset3': 0.5,
+  expected_by_indicator = {
+    "mdd": {
+      "asset1": 0.5,
+      "asset2": 0.5,
+    },
+    "stdev": {
+      "asset1": 0.5,
+      "asset2": 0.5,
+    },
+    "stdevr": {
+      "asset1": 0.5,
+      "asset2": 0.5,
+    },
+    "default": {
+      "asset2": 0.5,
+      "asset3": 0.5,
+    }
   }
 
-  result = allocate(('filter',
-    (
-      ('asset', 'asset1'),
-      ('asset', 'asset2'),
-      ('asset', 'asset3'),
-    ),
-    ('cr', 1),
-    ('top', 2)
-  ), date, price_data)
+  for indicator_type in WINDOW_INDICATOR_TYPES:
+    result = allocate(('filter',
+      (
+        ('asset', 'asset1'),
+        ('asset', 'asset2'),
+        ('asset', 'asset3'),
+      ),
+      (indicator_type, 1),
+      ('top', 2)
+    ), date, price_data)
 
-  assert result == expected
+    expected = None
+    if indicator_type in expected_by_indicator:
+      expected = expected_by_indicator[indicator_type]
+    else:
+      expected = expected_by_indicator["default"]
+
+    assert result == expected, f"Incorrect allocation for indicator type: {indicator_type}"
