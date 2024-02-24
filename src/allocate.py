@@ -479,8 +479,6 @@ def preprocess(fn, investable=False):
       match op:
         case "cr" | "mar" | "stdevr":
           window_days = window_days + 1
-        case "ema":
-          window_days = window_days * 2
         case "rsi":
           # rsi has a "warm up" period
           # that needs to be accounted for

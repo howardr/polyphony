@@ -3,7 +3,7 @@ import random
 import pandas as pd
 import pandas_ta as ta
 import pytest
-from allocate import allocate, run_indicator
+from allocate import allocate, preprocess, run_indicator
 
 WINDOW_INDICATOR_TYPES = ["cr", "ema", "ma", "mar", "mdd", "rsi", "stdev", "stdevr"]
 ALL_INDICATOR_TYPES = ["now"] + WINDOW_INDICATOR_TYPES
@@ -156,6 +156,12 @@ def test_allocate_indicator_cr():
   assert rhs == ((125 / 100) -1) * 100
   assert lhs < rhs
 
+  summary = preprocess(lhs_indicator)
+  assert summary["max_window_days"] == 2
+
+  summary = preprocess(rhs_indicator)
+  assert summary["max_window_days"] == 6
+
 
 def test_allocate_indicator_ema():
   date = pd.to_datetime('2023-01-06')
@@ -172,6 +178,9 @@ def test_allocate_indicator_ema():
 
   assert ema == expected[df.index[-1]]
 
+  summary = preprocess(indicator)
+  assert summary["max_window_days"] == 3
+
 
 def test_allocate_indicator_ma():
   date = pd.to_datetime('2023-01-05')
@@ -186,6 +195,9 @@ def test_allocate_indicator_ma():
   expected = (115 + 120) / 2
 
   assert ma == expected
+
+  summary = preprocess(indicator)
+  assert summary["max_window_days"] == 2
 
 def test_allocate_indicator_mar():
   date = pd.to_datetime('2023-01-06')
@@ -205,6 +217,9 @@ def test_allocate_indicator_mar():
 
   assert mar == expected
 
+  summary = preprocess(indicator)
+  assert summary["max_window_days"] == 3
+
 def test_allocate_indicator_mdd():
   date = pd.to_datetime('2023-01-09')
 
@@ -222,6 +237,9 @@ def test_allocate_indicator_mdd():
 
   # rounding bc they seem to be off by a tiny bit
   assert round(mdd, 3) == round(expected, 3)
+
+  summary = preprocess(indicator)
+  assert summary["max_window_days"] == 9
 
 
 def test_allocate_indicator_rsi():
@@ -245,6 +263,9 @@ def test_allocate_indicator_rsi():
 
   assert rsi == expected
 
+  summary = preprocess(indicator)
+  assert summary["max_window_days"] == periods
+
 
 def test_allocate_indicator_stdev():
   date = pd.to_datetime('2023-01-06')
@@ -263,6 +284,9 @@ def test_allocate_indicator_stdev():
   expected = df["Close"].std()
 
   assert std == expected
+
+  summary = preprocess(indicator)
+  assert summary["max_window_days"] == 6
 
 
 def test_allocate_indicator_stdevr():
@@ -283,6 +307,9 @@ def test_allocate_indicator_stdevr():
   expected = df["Close"].pct_change()[-window_days:].std() * 100
 
   assert std == expected
+
+  summary = preprocess(indicator)
+  assert summary["max_window_days"] == (window_days + 1)
 
 
 def test_allocate_indicator_caching_correct_values():
