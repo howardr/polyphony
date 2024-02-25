@@ -349,6 +349,7 @@ def test_allocate_coerce_datetime():
 
 def test_allocate_filter_top_assets():
   date = datetime.date(2023, 1, 2)
+  window_days = 1
 
   # todo: figure out what happens if there is a "tie" in a sort
   price_data = pd.DataFrame({
@@ -358,7 +359,7 @@ def test_allocate_filter_top_assets():
   }, index=pd.date_range('2023-01-01', periods=2))
   price_data.columns.names = ['Price', 'Ticker']
 
-  expected_by_indicator = {
+  expected_allocation_by_indicator = {
     "mdd": {
       "asset1": 0.5,
       "asset2": 0.5,
@@ -377,21 +378,39 @@ def test_allocate_filter_top_assets():
     }
   }
 
+  expected_max_window_days = {
+    "cr": window_days + 1,
+    "mar": window_days + 1,
+    "stdevr": window_days + 1,
+    "rsi": window_days + 250,
+    "default": 1,
+  }
+
   for indicator_type in WINDOW_INDICATOR_TYPES:
-    result = allocate(('filter',
+    algo = ('filter',
       (
         ('asset', 'asset1'),
         ('asset', 'asset2'),
         ('asset', 'asset3'),
       ),
-      (indicator_type, 1),
+      (indicator_type, window_days),
       ('top', 2)
-    ), date, price_data)
+    )
+
+    result = allocate(algo, date, price_data)
 
     expected = None
-    if indicator_type in expected_by_indicator:
-      expected = expected_by_indicator[indicator_type]
+    if indicator_type in expected_allocation_by_indicator:
+      expected = expected_allocation_by_indicator[indicator_type]
     else:
-      expected = expected_by_indicator["default"]
+      expected = expected_allocation_by_indicator["default"]
 
     assert result == expected, f"Incorrect allocation for indicator type: {indicator_type}"
+
+    summary = preprocess(algo)
+    expected_period = None
+    if indicator_type in expected_max_window_days:
+      expected_period = expected_max_window_days[indicator_type]
+    else:
+      expected_period = expected_max_window_days["default"]
+    assert summary["max_window_days"] == expected_period, f"Incorrect max window days for indicator type: {indicator_type}"
