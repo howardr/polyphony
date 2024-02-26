@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 import src.composer as composer
 import src.utils as utils
-from src.allocate import allocate, preprocess
+from src.allocate import allocate, backtest, preprocess
 from src.parse import parse
 
 warnings.filterwarnings(
@@ -16,10 +16,10 @@ warnings.filterwarnings(
 
 symponies = [
   #'HhMTavgzaIbD7rh7LM5D', # hwrdr - Master Switchboard
-  "wmDK13UrFbWbObhmnQLG",
-  "JgsHlLLVCwLBduSsxL4V",  # hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
-  "08Kfs9P7LYH5I0IYuDLf",
-  "H9ORvJ20z0uk4wTVvRb1",
+  #"wmDK13UrFbWbObhmnQLG",
+  #"JgsHlLLVCwLBduSsxL4V",  # hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
+  #"08Kfs9P7LYH5I0IYuDLf",
+  #"H9ORvJ20z0uk4wTVvRb1",
   "M3vczEzxMOH5YYzMU4PT",  # WT Specific
   "wzDUjTZQGeLFCD7nYA9d",  # Test Stdevr
   "g9xMjPlQtnSzcINBaKgj",  # Test MAR
@@ -63,16 +63,18 @@ for id in symponies:
 
   actuals = composer.fetch_backtest(id, actual_start_date, range_end)
 
-  date_range = pd.date_range(start=actual_start_date, end=range_end)
   expected = pd.DataFrame().reindex_like(actuals)
   for col in actuals.columns:
     expected[col].values[:] = 0.0
 
-  for trading_date in price_data.index[-num_days:]:
-    allocation = allocate(algo, trading_date, price_data, cache_data)
+  simulation = backtest(algo, actual_start_date, range_end, price_data, cache_data)
 
-    for t in summary["investable_assets"]:
-      expected.at[trading_date, t] = allocation[t]
+  tickers = list(summary["investable_assets"]) + ["$USD"]
+  for d, portfolio_value, daily_portfolio in simulation:
+    for t in tickers:
+      position = daily_portfolio.get(t, (0.0, 0.0, 0.0))
+      ticker_allocation, purchase_prices, shares_owned = position
+      expected.at[d, t] = ticker_allocation
 
   compare = expected.compare(actuals)
 

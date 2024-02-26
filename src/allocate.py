@@ -323,17 +323,17 @@ def stdevr(block, date, window_days, price_data, cache_data=None):
 
   return percent
 
+def backtest(block, start_date, end_date, price_data, cache_data=None, fractional = None):
+  start_date = pd.to_datetime(start_date)
+  end_date = pd.to_datetime(end_date)
 
-def price_history(block, date, days, price_data, cache_data=None):
-  date = pd.to_datetime(date)
-
-  cache_key = f"price_history_{block}_{date}_{days}"
+  cache_key = f"backtest_{block}_{start_date}_{end_date}"
   if cache_data is not None and cache_key in cache_data:
     return cache_data[cache_key]
 
   # use dates of trading data to find days
-  range_end_index = price_data.index.get_loc(date)
-  range_start_index = max(0, range_end_index - (days - 1))
+  range_start_index = price_data.index.get_loc(start_date)
+  range_end_index = price_data.index.get_loc(end_date)
   td = price_data.iloc[range_start_index : range_end_index + 1]["Adj Close"]
 
   tickers = set()
@@ -343,41 +343,79 @@ def price_history(block, date, days, price_data, cache_data=None):
     tickers.update(allocation.keys())
     daily_allocations[str(d)] = allocation
 
-  # { ticker: [percent, price, shares] }
-  portfolio = None
+  daily_portfolio = None
 
   values = []
   for d in td.index:
-    al = daily_allocations[str(d)]
-    new_portfolio = {}
+    allocations = daily_allocations[str(d)]
 
-    value = 0
-    if portfolio is None:
-      for ticker, percent in al.items():
-        current_price = td[ticker][d]
-        value += current_price
+    portfolio_value = 0.0
+    if daily_portfolio is None:
+      for ticker, ticker_allocation in allocations.items():
+        current_price = None
+        if ticker == "$USD":
+          current_price = 1
+        else:
+          current_price = td[ticker][d]
+
+        portfolio_value += current_price
     else:
-      for ticker, position in portfolio.items():
-        percent, buy_price, shares = position
-        current_price = td[ticker][d]
+      for ticker, position in daily_portfolio.items():
+        ticker_allocation, buy_price, shares_owned = position
 
-        value += shares * current_price
+        current_price = None
+        if ticker == "$USD":
+          current_price = 1
+        else:
+          current_price = td[ticker][d]
 
-    for ticker, percent in al.items():
+        portfolio_value += shares_owned * current_price
+
+    daily_portfolio = {}
+    invested_value = 0.0
+    for ticker, ticker_allocation in allocations.items():
       current_price = td[ticker][d]
-      cost_basis = value * percent
-      shares = cost_basis / current_price
+      cost_basis = portfolio_value * ticker_allocation
+      shares_to_buy = None
+      
+      if fractional is None or fractional.get(ticker, True):
+        shares_to_buy = cost_basis / current_price
+      else:
+        # franctional shares NOT allowed
+        shares_to_buy = int(cost_basis / current_price)
+        cost_basis = shares_to_buy * current_price
+        ticker_allocation = cost_basis / portfolio_value
 
-      new_portfolio[ticker] = [percent, current_price, shares]
+      invested_value += cost_basis
 
-    # TODO: rebalance
-    tickers = set()
-    tickers.update(new_portfolio.keys())
-    if portfolio is not None:
-      tickers.update(portfolio.keys())
+      daily_portfolio[ticker] = [ticker_allocation, current_price, shares_to_buy]
 
-    values.append(value)
-    portfolio = new_portfolio
+    uninvested_value = portfolio_value - invested_value
+    daily_portfolio["$USD"] = [uninvested_value / portfolio_value, 1, uninvested_value]
+
+    values.append((d, portfolio_value, daily_portfolio))
+
+  if cache_data is not None:
+    cache_data[cache_key] = values
+
+  return values
+
+def price_history(block, date, days, price_data, cache_data=None, fractional = None):
+  date = pd.to_datetime(date)
+
+  cache_key = f"backtest_{block}_{date}_{days}"
+  if cache_data is not None and cache_key in cache_data:
+    return cache_data[cache_key]
+
+  # use dates of trading data to find days
+  range_end_index = price_data.index.get_loc(date)
+  range_start_index = max(0, range_end_index - (days - 1))
+
+  simulation = backtest(block, price_data.index[range_start_index],price_data.index[range_end_index], price_data, cache_data, fractional)
+
+  values = []
+  for d, portfolio_value, daily_portfolio in simulation:
+    values.append(portfolio_value)
 
   if cache_data is not None:
     cache_data[cache_key] = values
