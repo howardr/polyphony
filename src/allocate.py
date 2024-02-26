@@ -323,11 +323,11 @@ def stdevr(block, date, window_days, price_data, cache_data=None):
 
   return percent
 
-def backtest(block, start_date, end_date, price_data, cache_data=None, fractional = None):
+def backtest(initial_value, block, start_date, end_date, price_data, cache_data=None, fractional = None):
   start_date = pd.to_datetime(start_date)
   end_date = pd.to_datetime(end_date)
 
-  cache_key = f"backtest_{block}_{start_date}_{end_date}"
+  cache_key = f"backtest_{initial_value}_{block}_{start_date}_{end_date}"
   if cache_data is not None and cache_key in cache_data:
     return cache_data[cache_key]
 
@@ -351,14 +351,17 @@ def backtest(block, start_date, end_date, price_data, cache_data=None, fractiona
 
     portfolio_value = 0.0
     if daily_portfolio is None:
-      for ticker, ticker_allocation in allocations.items():
-        current_price = None
-        if ticker == "$USD":
-          current_price = 1
-        else:
-          current_price = td[ticker][d]
+      if initial_value is not None:
+        portfolio_value = initial_value
+      else:
+        for ticker, ticker_allocation in allocations.items():
+          current_price = None
+          if ticker == "$USD":
+            current_price = 1
+          else:
+            current_price = td[ticker][d]
 
-        portfolio_value += current_price
+          portfolio_value += current_price
     else:
       for ticker, position in daily_portfolio.items():
         ticker_allocation, buy_price, shares_owned = position
@@ -403,7 +406,7 @@ def backtest(block, start_date, end_date, price_data, cache_data=None, fractiona
 def price_history(block, date, days, price_data, cache_data=None, fractional = None):
   date = pd.to_datetime(date)
 
-  cache_key = f"backtest_{block}_{date}_{days}"
+  cache_key = f"price_history_{block}_{date}_{days}"
   if cache_data is not None and cache_key in cache_data:
     return cache_data[cache_key]
 
@@ -411,7 +414,7 @@ def price_history(block, date, days, price_data, cache_data=None, fractional = N
   range_end_index = price_data.index.get_loc(date)
   range_start_index = max(0, range_end_index - (days - 1))
 
-  simulation = backtest(block, price_data.index[range_start_index],price_data.index[range_end_index], price_data, cache_data, fractional)
+  simulation = backtest(None, block, price_data.index[range_start_index],price_data.index[range_end_index], price_data, cache_data, fractional)
 
   values = []
   for d, portfolio_value, daily_portfolio in simulation:

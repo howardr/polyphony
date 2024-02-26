@@ -27,6 +27,7 @@ symponies = [
   "87Sxtv9ZlYZfwVU7TwHq",  # Test CR
   "gGpTJO2qpzfEAXHgWciX",  # Test EMA
   "Fh0KTN40v0i6nCx26VWp",  # Test MDD
+  "SqEr82qGXB3muOAa3g99",  # Test Non-fracional Assets
   #'Wc26zCuOAQ3vXOXtAxor'
 ]
 
@@ -67,7 +68,8 @@ for id in symponies:
   for col in actuals.columns:
     expected[col].values[:] = 0.0
 
-  simulation = backtest(algo, actual_start_date, range_end, price_data, cache_data)
+  fractional = utils.alpaca_allows_fracional_shares_check(summary["investable_assets"])
+  simulation = backtest(10000.0, algo, actual_start_date, range_end, price_data, cache_data, fractional)
 
   tickers = list(summary["investable_assets"]) + ["$USD"]
   for d, portfolio_value, daily_portfolio in simulation:
@@ -83,15 +85,6 @@ for id in symponies:
   print("Diff\n", compare, "\n")
 
   if not compare.empty:
-    if ("$USD", "other") in compare.columns and compare["$USD"]["other"].iloc[0] > 0:
-      total = 0.0
-      for ticker, table in compare.columns:
-        if table == "self" and ticker != "$USD":
-          total = total + compare[ticker]["self"].iloc[0]
-
-      if compare["$USD"]["other"].iloc[0] != (1.0 - total):
-        continue
-
     margin = 0.002
     found = False
     for d in compare.index:
