@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 import src.composer as composer
 import src.utils as utils
-from src.allocate import allocate, backtest, preprocess
+from src.allocate import backtest, preprocess
 from src.parse import parse
 
 warnings.filterwarnings(

@@ -1,3 +1,4 @@
+alpaca-py
 matplotlib
 numpy
 pandas==2.2.0
