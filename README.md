@@ -2,6 +2,8 @@
 
 Simple framework for portfoliio rebalancing and backtesting.
 
+Version: Alpha
+
 ## Goals and Use Cases
 
 - **Synthetic and Alternative Data.** Enable Monte Carlo simulations. Feed in simulated data to play out different scenarios. Use alternate pricing (e.g., historical Bitcoin prices) instead of newer BTC ETFs to conduct older backtests.
@@ -15,6 +17,16 @@ Simple framework for portfoliio rebalancing and backtesting.
 - **Workflow Automation / Switchboard Building.** Create Symphony JSON to use as a switchboard for multiple Symphony URLs. "Mute" branches instead of swapping BIL in/out to test different branches.
 
 - **Observability, Debugging, and Tracing.** See what assets will be chosen given a scenario, what branches were selected to generate an allocation, and what calculations were made for an indicator.
+
+## Version Alpha
+
+Code is currently in alpha.
+
+Focus right now is on consistency and trust of backtest calculations.
+
+The code is changing frequently and will do so with little or no communication.
+
+The code is ugly. Functionality is being layered in at the expense of code accessibility/usability to get a better understanding of workflows and how components interact with each other to help aid in a future redesign.
 
 # Example
 
