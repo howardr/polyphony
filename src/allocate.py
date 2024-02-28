@@ -3,7 +3,7 @@ import pandas_ta as ta
 from collections import defaultdict
 
 
-def allocate(block, date, price_data, cache_data=None):
+def allocate(block, date, price_data, cache_data=None, fractional=None):
   if cache_data is None:
     cache_data = {}
 
@@ -30,7 +30,7 @@ def allocate(block, date, price_data, cache_data=None):
           weights = []
           total = 0
           for b in blocks:
-            invol = 1 / stdevr(b, date, window_days, price_data, cache_data)
+            invol = 1 / stdevr(b, date, window_days, price_data, cache_data, fractional, 10000.0)
             weights.append(invol)
             total = total + invol
           weights = tuple(map(lambda invol: (invol, total), weights))
@@ -39,7 +39,7 @@ def allocate(block, date, price_data, cache_data=None):
       for i, b in enumerate(blocks):
         num, den = weights[i]
         wt = num / den
-        for ticker, inner_wt in allocate(b, date, price_data, cache_data).items():
+        for ticker, inner_wt in allocate(b, date, price_data, cache_data, fractional).items():
           weighted_allocation[ticker] = weighted_allocation[ticker] + (inner_wt * wt)
 
       return weighted_allocation
@@ -49,12 +49,12 @@ def allocate(block, date, price_data, cache_data=None):
       false_block = block[3]
 
       eval_block = None
-      if run_comparator(comparator, date, price_data, cache_data):
+      if run_comparator(comparator, date, price_data, cache_data, fractional):
         eval_block = true_block
       else:
         eval_block = false_block
 
-      return allocate(eval_block, date, price_data, cache_data)
+      return allocate(eval_block, date, price_data, cache_data, fractional)
     case "filter":
       blocks = block[1]
       sort_indicator = block[2]
@@ -62,40 +62,45 @@ def allocate(block, date, price_data, cache_data=None):
 
       values = []
 
+      # some indicators will need an initial value and others won't. There are 2 cases
+      # * Sorts over price and should not have an initial value as closing price should be used
+      # * Sorts over return should have an initial value
+      initial_value = 10000.0
+
       sort_indicator_op = sort_indicator[0]
       match sort_indicator_op:
         case "cr":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(cr(b, date, window_days, price_data, cache_data))
+            values.append(cr(b, date, window_days, price_data, cache_data, fractional, initial_value))
         case "ema":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(ema(b, date, window_days, price_data, cache_data))
+            values.append(ema(b, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False))
         case "ma":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(ma(b, date, window_days, price_data, cache_data))
+            values.append(ma(b, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False))
         case "mar":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(mar(b, date, window_days, price_data, cache_data))
+            values.append(mar(b, date, window_days, price_data, cache_data, fractional, initial_value))
         case "mdd":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(mdd(b, date, window_days, price_data, cache_data))
+            values.append(mdd(b, date, window_days, price_data, cache_data, fractional, initial_value))
         case "rsi":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(rsi(b, date, window_days, price_data, cache_data))
+            values.append(rsi(b, date, window_days, price_data, cache_data, fractional, initial_value))
         case "stdev":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(stdev(b, date, window_days, price_data, cache_data))
+            values.append(stdev(b, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False))
         case "stdevr":
           window_days = sort_indicator[1]
           for b in blocks:
-            values.append(stdevr(b, date, window_days, price_data, cache_data))
+            values.append(stdevr(b, date, window_days, price_data, cache_data, fractional, initial_value))
         case _:
           raise ValueError(f"'{sort_indicator_op}' is not a defined filter sort")
 
@@ -126,21 +131,21 @@ def allocate(block, date, price_data, cache_data=None):
       # unzip list of (block, value) to just be a list of blocks
       sorted_blocks = list(map(lambda entry: entry[0], sorted_blocks))
 
-      return allocate(["wteq", sorted_blocks], date, price_data, cache_data)
+      return allocate(["wteq", sorted_blocks], date, price_data, cache_data, fractional)
     case "group":
       # name = block[1]
       block = block[2]
-      return allocate(block, date, price_data, cache_data)
+      return allocate(block, date, price_data, cache_data, fractional)
     case _:
       raise ValueError(f"'{block_type}' is not a defined block")
 
 
-def run_comparator(comparator, date, price_data, cache_data=None):
+def run_comparator(comparator, date, price_data, cache_data=None, fractional=None):
   op = comparator[0]
 
   # indicators
-  lhs = run_indicator(comparator[1], date, price_data, cache_data)
-  rhs = run_indicator(comparator[2], date, price_data, cache_data)
+  lhs = run_indicator(comparator[1], date, price_data, cache_data, fractional)
+  rhs = run_indicator(comparator[2], date, price_data, cache_data, fractional)
 
   match op:
     case "gt":
@@ -155,52 +160,52 @@ def run_comparator(comparator, date, price_data, cache_data=None):
       raise ValueError(f"'{op}' is not a defined comparator")
 
 
-def run_indicator(indicator, date, price_data, cache_data=None):
+def run_indicator(indicator, date, price_data, cache_data=None, fractional=None):
   op = indicator[0]
   block = indicator[1]
 
   match op:
     case "now":
-      return now(block, date, price_data, cache_data)
+      return now(block, date, price_data, cache_data, fractional, use_fractional_if_provided=False)
     case "cr":
       window_days = indicator[2]
       return run_cacheable_indicator(
-        cr, block, date, window_days, price_data, cache_data
+        cr, block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False
       )
     case "ema":
       window_days = indicator[2]
       return run_cacheable_indicator(
-        ema, block, date, window_days, price_data, cache_data
+        ema, block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False
       )
     case "ma":
       window_days = indicator[2]
       return run_cacheable_indicator(
-        ma, block, date, window_days, price_data, cache_data
+        ma, block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False
       )
     case "mar":
       window_days = indicator[2]
       return run_cacheable_indicator(
-        mar, block, date, window_days, price_data, cache_data
+        mar, block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False
       )
     case "mdd":
       window_days = indicator[2]
       return run_cacheable_indicator(
-        mdd, block, date, window_days, price_data, cache_data
+        mdd, block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False
       )
     case "rsi":
       window_days = indicator[2]
       return run_cacheable_indicator(
-        rsi, block, date, window_days, price_data, cache_data
+        rsi, block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False
       )
     case "stdev":
       window_days = indicator[2]
       return run_cacheable_indicator(
-        stdev, block, date, window_days, price_data, cache_data
+        stdev, block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False
       )
     case "stdevr":
       window_days = indicator[2]
       return run_cacheable_indicator(
-        stdevr, block, date, window_days, price_data, cache_data
+        stdevr, block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=False
       )
     case "number":
       return float(indicator[1])
@@ -209,13 +214,13 @@ def run_indicator(indicator, date, price_data, cache_data=None):
 
 
 def run_cacheable_indicator(
-  indicator_fn, block, date, window_days, price_data, cache_data=None
+  indicator_fn, block, date, window_days, price_data, cache_data=None, fractional=None, use_fractional_if_provided=True
 ):
-  cache_key = f"{indicator_fn.__name__}_{block}_{date}_{window_days}"
+  cache_key = f"{indicator_fn.__name__}_{block}_{date}_{window_days}_{use_fractional_if_provided}"
   if cache_data is not None and cache_key in cache_data:
     return cache_data[cache_key]
 
-  value = indicator_fn(block, date, window_days, price_data, cache_data)
+  value = indicator_fn(block, date, window_days, price_data, cache_data, fractional, use_fractional_if_provided=use_fractional_if_provided)
 
   if cache_data is not None:
     cache_data[cache_key] = value
@@ -223,14 +228,14 @@ def run_cacheable_indicator(
   return value
 
 
-def now(block, date, price_data, cache_data=None):
-  prices = price_history(block, date, 1, price_data, cache_data)
+def now(block, date, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
+  prices = price_history(block, date, 1, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided)
   return prices[-1]
 
 
-def cr(block, date, window_days, price_data, cache_data=None):
+def cr(block, date, window_days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
   offset = window_days + 1
-  prices = price_history(block, date, offset, price_data, cache_data)
+  prices = price_history(block, date, offset, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided)
 
   cr = (prices[-1] / prices[-offset]) - 1
 
@@ -241,10 +246,10 @@ def cr(block, date, window_days, price_data, cache_data=None):
   return percent
 
 
-def ema(block, date, window_days, price_data, cache_data=None):
+def ema(block, date, window_days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
   # todo: I don't think I need to double the window days to get the right number
   num_days = window_days * 2
-  prices = price_history(block, date, num_days, price_data, cache_data)
+  prices = price_history(block, date, num_days, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided)
 
   if num_days > len(prices):
     raise ValueError("Not enough data to calculate EMA")
@@ -256,8 +261,8 @@ def ema(block, date, window_days, price_data, cache_data=None):
   return value
 
 
-def ma(block, date, window_days, price_data, cache_data=None):
-  prices = price_history(block, date, window_days, price_data, cache_data)
+def ma(block, date, window_days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
+  prices = price_history(block, date, window_days, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided)
 
   # this isn't really "moving," but I get why we are calling it that
   ma = sum(prices) / float(len(prices))
@@ -265,8 +270,8 @@ def ma(block, date, window_days, price_data, cache_data=None):
   return ma
 
 
-def mar(block, date, window_days, price_data, cache_data=None):
-  prices = price_history(block, date, window_days + 1, price_data, cache_data)
+def mar(block, date, window_days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
+  prices = price_history(block, date, window_days + 1, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided)
 
   df = pd.DataFrame({"Close": prices})
   ma = ta.sma(df["Close"].pct_change(), length=window_days)
@@ -277,8 +282,8 @@ def mar(block, date, window_days, price_data, cache_data=None):
   return percent
 
 
-def mdd(block, date, window_days, price_data, cache_data=None):
-  prices = price_history(block, date, window_days, price_data, cache_data)
+def mdd(block, date, window_days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
+  prices = price_history(block, date, window_days, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided)
 
   df = pd.DataFrame({"Close": prices})
   dd = ta.max_drawdown(df["Close"], method="percent")
@@ -289,13 +294,13 @@ def mdd(block, date, window_days, price_data, cache_data=None):
   return percent
 
 
-def rsi(block, date, window_days, price_data, cache_data=None):
+def rsi(block, date, window_days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
   # "They use a 250 day lookback period (i.e. smoothing/warmup)" - @JasonKoz
   # https://discord.com/channels/1018958699991138386/1019589796802351106/1191042469262012416
   lookback_days = 250
 
   prices = price_history(
-    block, date, window_days + lookback_days, price_data, cache_data
+    block, date, window_days + lookback_days, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided
   )
 
   # convert to DataFrame and run rsi method
@@ -305,16 +310,16 @@ def rsi(block, date, window_days, price_data, cache_data=None):
   return rsi
 
 
-def stdev(block, date, window_days, price_data, cache_data=None):
-  prices = price_history(block, date, window_days, price_data, cache_data)
+def stdev(block, date, window_days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
+  prices = price_history(block, date, window_days, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided)
   df = pd.DataFrame({"Close": prices})
   std = df["Close"].std()
 
   return std
 
 
-def stdevr(block, date, window_days, price_data, cache_data=None):
-  prices = price_history(block, date, window_days + 1, price_data, cache_data)
+def stdevr(block, date, window_days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
+  prices = price_history(block, date, window_days + 1, price_data, cache_data, fractional, initial_value, use_fractional_if_provided=use_fractional_if_provided)
   df = pd.DataFrame({"Close": prices})
   std = df["Close"].pct_change()[1:].std()
 
@@ -323,7 +328,7 @@ def stdevr(block, date, window_days, price_data, cache_data=None):
 
   return percent
 
-def backtest(initial_value, block, start_date, end_date, price_data, cache_data=None, fractional = None):
+def backtest(initial_value, block, start_date, end_date, price_data, cache_data=None, fractional=None, use_fractional_if_provided=True):
   start_date = pd.to_datetime(start_date)
   end_date = pd.to_datetime(end_date)
 
@@ -339,7 +344,7 @@ def backtest(initial_value, block, start_date, end_date, price_data, cache_data=
   tickers = set()
   daily_allocations = {}
   for d in td.index:
-    allocation = allocate(block, d, price_data, cache_data)
+    allocation = allocate(block, d, price_data, cache_data, fractional)
     tickers.update(allocation.keys())
     daily_allocations[str(d)] = allocation
 
@@ -381,7 +386,7 @@ def backtest(initial_value, block, start_date, end_date, price_data, cache_data=
       cost_basis = portfolio_value * ticker_allocation
       shares_to_buy = None
       
-      if fractional is None or fractional.get(ticker, True):
+      if fractional is None or not use_fractional_if_provided or fractional.get(ticker, True):
         shares_to_buy = cost_basis / current_price
       else:
         # franctional shares NOT allowed
@@ -403,18 +408,18 @@ def backtest(initial_value, block, start_date, end_date, price_data, cache_data=
 
   return values
 
-def price_history(block, date, days, price_data, cache_data=None, fractional = None):
+def price_history(block, date, days, price_data, cache_data=None, fractional=None, initial_value=None, use_fractional_if_provided=True):
   date = pd.to_datetime(date)
 
-  cache_key = f"price_history_{block}_{date}_{days}"
+  cache_key = f"price_history_{block}_{date}_{days}_{initial_value}"
   if cache_data is not None and cache_key in cache_data:
     return cache_data[cache_key]
 
-  # use dates of trading data to find days
+  # use dates   of trading data to find days
   range_end_index = price_data.index.get_loc(date)
   range_start_index = max(0, range_end_index - (days - 1))
 
-  simulation = backtest(None, block, price_data.index[range_start_index],price_data.index[range_end_index], price_data, cache_data, fractional)
+  simulation = backtest(initial_value, block, price_data.index[range_start_index],price_data.index[range_end_index], price_data, cache_data, fractional, use_fractional_if_provided=use_fractional_if_provided)
 
   values = []
   for d, portfolio_value, daily_portfolio in simulation:

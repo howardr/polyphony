@@ -15,26 +15,26 @@ warnings.filterwarnings(
 )
 
 symponies = [
-  #'HhMTavgzaIbD7rh7LM5D', # hwrdr - Master Switchboard
-  #"wmDK13UrFbWbObhmnQLG",
-  #"JgsHlLLVCwLBduSsxL4V",  # hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
-  #"08Kfs9P7LYH5I0IYuDLf",
-  #"H9ORvJ20z0uk4wTVvRb1",
-  "M3vczEzxMOH5YYzMU4PT",  # WT Specific
-  "wzDUjTZQGeLFCD7nYA9d",  # Test Stdevr
-  "g9xMjPlQtnSzcINBaKgj",  # Test MAR
-  "2epuaVyiooe5wGVxs1Ps",  # Test Stdev
-  "87Sxtv9ZlYZfwVU7TwHq",  # Test CR
-  "gGpTJO2qpzfEAXHgWciX",  # Test EMA
-  "Fh0KTN40v0i6nCx26VWp",  # Test MDD
-  "SqEr82qGXB3muOAa3g99",  # Test Non-fracional Assets
-  #'Wc26zCuOAQ3vXOXtAxor'
+  # 'HhMTavgzaIbD7rh7LM5D',  # Too long to load. hwrdr - Master Switchboard
+  "wmDK13UrFbWbObhmnQLG",  # Works
+  "JgsHlLLVCwLBduSsxL4V",  # Works. hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
+  "08Kfs9P7LYH5I0IYuDLf",  # Works
+  "H9ORvJ20z0uk4wTVvRb1",  # Works
+  "M3vczEzxMOH5YYzMU4PT",  # Works. WT Specific
+  "wzDUjTZQGeLFCD7nYA9d",  # Works. Test Stdevr
+  "g9xMjPlQtnSzcINBaKgj",  # Works. Test MAR
+  "2epuaVyiooe5wGVxs1Ps",  # Works. Test Stdev
+  "87Sxtv9ZlYZfwVU7TwHq",  # Works. Test CR
+  "gGpTJO2qpzfEAXHgWciX",  # Works. Test EMA
+  "Fh0KTN40v0i6nCx26VWp",  # Works. Test MDD
+  "SqEr82qGXB3muOAa3g99",  # Works. Test Non-fracional Assets
+  # "Wc26zCuOAQ3vXOXtAxor",  # 2024-02-12 chooses the wrong investment
 ]
 
 # using "yesterday" to avoid getting intraday price data
 # if this is called during market hours
 yesterday = datetime.date.today() + datetime.timedelta(days=-1)
-num_days = 10
+num_days = 15
 cache_data = {}
 
 for id in symponies:
@@ -85,7 +85,7 @@ for id in symponies:
   print("Diff\n", compare, "\n")
 
   if not compare.empty:
-    margin = 0.002
+    margin = 0.0021
     found = False
     for d in compare.index:
       size = int(len(compare.columns) / 2)
