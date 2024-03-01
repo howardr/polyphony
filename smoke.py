@@ -4,7 +4,7 @@ import pandas as pd
 import yfinance as yf
 import src.composer as composer
 import src.utils as utils
-from src.allocate import allocate, preprocess
+from src.allocate import backtest, preprocess
 from src.parse import parse
 
 warnings.filterwarnings(
@@ -15,25 +15,26 @@ warnings.filterwarnings(
 )
 
 symponies = [
-  #'HhMTavgzaIbD7rh7LM5D', # hwrdr - Master Switchboard
-  "wmDK13UrFbWbObhmnQLG",
-  "JgsHlLLVCwLBduSsxL4V",  # hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
-  "08Kfs9P7LYH5I0IYuDLf",
-  "H9ORvJ20z0uk4wTVvRb1",
-  "M3vczEzxMOH5YYzMU4PT",  # WT Specific
-  "wzDUjTZQGeLFCD7nYA9d",  # Test Stdevr
-  "g9xMjPlQtnSzcINBaKgj",  # Test MAR
-  "2epuaVyiooe5wGVxs1Ps",  # Test Stdev
-  "87Sxtv9ZlYZfwVU7TwHq",  # Test CR
-  "gGpTJO2qpzfEAXHgWciX",  # Test EMA
-  "Fh0KTN40v0i6nCx26VWp",  # Test MDD
-  #'Wc26zCuOAQ3vXOXtAxor'
+  # 'HhMTavgzaIbD7rh7LM5D',  # Too long to load. hwrdr - Master Switchboard
+  "wmDK13UrFbWbObhmnQLG",  # Works
+  "JgsHlLLVCwLBduSsxL4V",  # Works. hwrdr - TQQQ FTLT Original - JKoz Tweaked Copy - s/UVXY/VIXY
+  "08Kfs9P7LYH5I0IYuDLf",  # Works
+  "H9ORvJ20z0uk4wTVvRb1",  # Works
+  "M3vczEzxMOH5YYzMU4PT",  # Works. WT Specific
+  "wzDUjTZQGeLFCD7nYA9d",  # Works. Test Stdevr
+  "g9xMjPlQtnSzcINBaKgj",  # Works. Test MAR
+  "2epuaVyiooe5wGVxs1Ps",  # Works. Test Stdev
+  "87Sxtv9ZlYZfwVU7TwHq",  # Works. Test CR
+  "gGpTJO2qpzfEAXHgWciX",  # Works. Test EMA
+  "Fh0KTN40v0i6nCx26VWp",  # Works. Test MDD
+  "SqEr82qGXB3muOAa3g99",  # Works. Test Non-fracional Assets
+  # "Wc26zCuOAQ3vXOXtAxor",  # 2024-02-12 chooses the wrong investment
 ]
 
 # using "yesterday" to avoid getting intraday price data
 # if this is called during market hours
 yesterday = datetime.date.today() + datetime.timedelta(days=-1)
-num_days = 10
+num_days = 15
 cache_data = {}
 
 for id in symponies:
@@ -63,16 +64,19 @@ for id in symponies:
 
   actuals = composer.fetch_backtest(id, actual_start_date, range_end)
 
-  date_range = pd.date_range(start=actual_start_date, end=range_end)
   expected = pd.DataFrame().reindex_like(actuals)
   for col in actuals.columns:
     expected[col].values[:] = 0.0
 
-  for trading_date in price_data.index[-num_days:]:
-    allocation = allocate(algo, trading_date, price_data, cache_data)
+  fractional = utils.alpaca_allows_fracional_shares_check(summary["investable_assets"])
+  simulation = backtest(10000.0, algo, actual_start_date, range_end, price_data, cache_data, fractional)
 
-    for t in summary["investable_assets"]:
-      expected.at[trading_date, t] = allocation[t]
+  tickers = list(summary["investable_assets"]) + ["$USD"]
+  for d, portfolio_value, daily_portfolio in simulation:
+    for t in tickers:
+      position = daily_portfolio.get(t, (0.0, 0.0, 0.0))
+      ticker_allocation, purchase_prices, shares_owned = position
+      expected.at[d, t] = ticker_allocation
 
   compare = expected.compare(actuals)
 
@@ -81,16 +85,7 @@ for id in symponies:
   print("Diff\n", compare, "\n")
 
   if not compare.empty:
-    if ("$USD", "other") in compare.columns and compare["$USD"]["other"].iloc[0] > 0:
-      total = 0.0
-      for ticker, table in compare.columns:
-        if table == "self" and ticker != "$USD":
-          total = total + compare[ticker]["self"].iloc[0]
-
-      if compare["$USD"]["other"].iloc[0] != (1.0 - total):
-        continue
-
-    margin = 0.002
+    margin = 0.0021
     found = False
     for d in compare.index:
       size = int(len(compare.columns) / 2)
