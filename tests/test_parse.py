@@ -183,3 +183,20 @@ def test_rebalance_period():
   algo = parse(symphony_json)
 
   assert algo == expected_algo
+
+def test_rebalance_threshold():
+  symphony_json = {'step': 'root', 'name': 'Test Threshold', 'rebalance': 'none', 'rebalance-corridor-width': 0.1, 'children': [{'step': 'wt-cash-equal', 'children': [{'weight': {'num': 100, 'den': 100}, 'ticker': 'BIL', 'step': 'asset'}]}]}
+
+  expected_algo = ('algo', 'Test Threshold', ('wteq', (('asset', 'BIL'),)), ('threshold', 0.1))
+  algo = parse(symphony_json)
+
+  assert algo == expected_algo
+
+def test_rebalance_period_and_threshold():
+  # period should take precedence over threshold. Threshold should only be used if rebalance value is "none"
+  symphony_json = {'step': 'root', 'name': 'Test Threshold', 'rebalance-corridor-width': 0.1, 'children': [{'step': 'wt-cash-equal', 'children': [{'weight': {'num': 100, 'den': 100}, 'ticker': 'BIL', 'step': 'asset'}]}]}
+
+  expected_algo = ('algo', 'Test Threshold', ('wteq', (('asset', 'BIL'),)), ('rebalance', 'none-set'))
+  algo = parse(symphony_json)
+
+  assert algo == expected_algo

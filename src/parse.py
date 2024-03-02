@@ -6,7 +6,11 @@ def parse(node):
         name = node["name"]
 
       if "rebalance" in node:
-        rebalance = ("rebalance", node["rebalance"])
+        # 'rebalance': 'none', 'rebalance-corridor-width': 0.1
+        if node["rebalance"] == "none" and "rebalance-corridor-width" in node:
+          rebalance = ("threshold", float(node["rebalance-corridor-width"]))
+        else:
+          rebalance = ("rebalance", node["rebalance"])
       else:
         rebalance = ("rebalance", "none-set")
 
