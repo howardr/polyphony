@@ -1,8 +1,17 @@
 def parse(node):
   match node["step"]:
     case "root":
+      name = ""
+      if "name" in node:
+        name = node["name"]
+
+      if "rebalance" in node:
+        rebalance = ("rebalance", node["rebalance"])
+      else:
+        rebalance = ("rebalance", "none-set")
+
       # assumption that there can only be one child off of a root
-      return parse(node["children"][0])
+      return ("algo", name, parse(node["children"][0]), rebalance)
     case "wt-cash-equal":
       return ("wteq", tuple(map(parse, node["children"])))
     case "wt-cash-specified":
