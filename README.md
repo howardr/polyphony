@@ -554,3 +554,63 @@ Examples
   ['ma', ['asset', 'SPY'], 60]
 ]
 ```
+
+## Dev Environment
+
+### Setup
+
+#### asdf
+
+Download and install `asdf` https://asdf-vm.com/guide/getting-started.html
+
+#### python
+
+Using asdf add python plugin
+
+```bash
+asdf plugin-add python
+```
+
+Using asdf install python (via .tool-sersions file)
+
+```bash
+asdf install
+```
+
+Create venv
+
+```bash
+python -m venv venv
+```
+
+Load venv
+
+```bash
+source venv/bin/activate
+```
+
+Install python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Run
+
+Make sure venv is active
+
+```bash
+source venv/bin/activate
+```
+
+Run
+
+```bash
+python run.py
+```
+
+### Test
+
+```bash
+pytest
+```
