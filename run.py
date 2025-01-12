@@ -19,7 +19,7 @@ warnings.filterwarnings(
 # https://app.composer.trade/symphony/wmDK13UrFbWbObhmnQLG/details
 # https://codebeautify.org/jsonviewer/y24e1177e
 symphony_id = (
-  "wmDK13UrFbWbObhmnQLG"  # hwrdr - TQQQ For The Long Term (Reddit Post Link)
+  "dqV980zyulOFjUh0OdW8"  # hwrdr - TQQQ For The Long Term (Reddit Post Link)
 )
 
 # Fetch and print the JSON data
@@ -27,6 +27,10 @@ num_days = 10
 date = datetime.date.today()
 
 data = composer.fetch_definition(symphony_id)
+
+print(data)
+exit
+
 algo = parse(data)
 
 summary = preprocess(algo)

@@ -136,6 +136,11 @@ def allocate(block, date, price_data, cache_data=None, fractional=None):
       # name = block[1]
       block = block[2]
       return allocate(block, date, price_data, cache_data, fractional)
+    case "algo":
+      # root node that when actually running is essentially the same as group
+      # name = block[1]
+      block = block[2]
+      return allocate(block, date, price_data, cache_data, fractional)
     case _:
       raise ValueError(f"'{block_type}' is not a defined block")
 
@@ -432,6 +437,9 @@ def price_history(block, date, days, price_data, cache_data=None, fractional=Non
 
 
 def preprocess(fn, investable=False):
+  algo_name = None
+  algo_rebalance = None
+  algo_threshold = None
   assets = set()
   investable_assets = set()
   indicators = []
@@ -502,6 +510,25 @@ def preprocess(fn, investable=False):
       block = args[1]
 
       merge(block, investable=True)
+    case "algo":
+      # algo values do not need to be merged. The assumption is that
+      # there is only one algo block (if any) in an algo and it's the top
+      # most value. This ensures that the algo name and rebalance values don't
+      # get overwritten by an inner block
+      algo_name = args[0]
+      block = args[1]
+      rebalance = args[2]
+
+      if rebalance is not None:
+        rebalance_type, rebalance_value = rebalance
+        match rebalance_type:
+          case "rebalance":
+            if rebalance_value != "none" or rebalance_value != "none-set":
+              algo_rebalance = rebalance_value
+          case "threshold":
+            algo_threshold = rebalance_value
+
+      merge(block, investable=True)
 
     # comparators
     case "gt" | "gte" | "lt" | "lte":
@@ -541,6 +568,9 @@ def preprocess(fn, investable=False):
       raise ValueError(f"'{op}' is not a valid operation")
 
   return {
+    "name": algo_name,
+    "rebalance": algo_rebalance,
+    "threshold": algo_threshold,
     "assets": assets,
     "investable_assets": investable_assets,
     # "indicators": indicators,

@@ -414,3 +414,16 @@ def test_allocate_filter_top_assets():
     else:
       expected_period = expected_max_window_days["default"]
     assert summary["max_window_days"] == expected_period, f"Incorrect max window days for indicator type: {indicator_type}"
+
+def test_preprocess_algo_values():
+  algo = ('algo', 'My Algo', ('asset', 'asset1'), ('rebalance', 'daily'))
+  summary = preprocess(algo)
+  assert summary["name"] == "My Algo"
+  assert summary["rebalance"] == "daily"
+  assert summary["threshold"] is None
+
+  algo = ('algo', 'My Algo', ('asset', 'asset1'), ('threshold', 0.2))
+  summary = preprocess(algo)
+  assert summary["name"] == "My Algo"
+  assert summary["rebalance"] is None
+  assert summary["threshold"] == 0.2
