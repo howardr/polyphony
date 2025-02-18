@@ -1,4 +1,6 @@
 alpaca-py
+flask
+flask-cors
 matplotlib
 numpy
 pandas==2.2.0
