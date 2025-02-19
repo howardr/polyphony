@@ -8,6 +8,7 @@ from flask import Flask, jsonify, request
 from flask_cors import CORS
 from src.allocate import allocate, preprocess, run_indicator
 from src.parse import parse
+import src.composer as composer
 
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}})
@@ -36,8 +37,11 @@ def get_algo_results():
           " ".join(tickers),
           start=start_date,
           end=(date + datetime.timedelta(days=1)),
-          progress=False
+          progress=False,
+          auto_adjust=True,
         )
+
+        print(price_data)
 
         range = price_data.index[-num_days:]
         df = pd.DataFrame(0.0, index=range, columns=["value"])
@@ -54,10 +58,42 @@ def get_algo_results():
             'timestamp': row[0].strftime('%Y-%m-%d')
           } for row in df.itertuples()
         ]
-        
+
         return jsonify({
           'indicator': indicator,
           'results': formatted_results
+        })
+
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/algo/<id>', methods=['GET'])
+def get_algo(id):
+    try:
+        # Fetch the composer definition using the ID
+        definition = composer.fetch_definition(id)
+        if not definition:
+            return jsonify({'error': 'Algorithm not found'}), 404
+
+        # Parse the definition into our internal format
+        parsed_algo = parse(definition)
+        
+        # Get summary info about the algorithm
+        summary = preprocess(parsed_algo)
+        
+        # Convert sets to lists in summary
+        json_summary = {
+            'assets': list(summary['assets']),
+            'investable_assets': list(summary['investable_assets']),
+            'max_window_days': summary['max_window_days']
+        }
+
+        return jsonify({
+            'id': id,
+            'name': definition.get('name', ''),
+            'description': definition.get('description', ''),
+            'algo': parsed_algo,
+            'summary': json_summary
         })
 
     except Exception as e:
