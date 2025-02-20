@@ -20,8 +20,33 @@ def get_algo_results():
         if not indicator:
             return jsonify({'error': 'Indicator is required'}), 400
 
+        num_days = 90
+        date = datetime.date.today()
+
         # Parse the indicator
         parsed_indicator = json.loads(indicator)
+
+        if parsed_indicator[0] == "number":
+            # Get the last num_days trading days from price data
+            price_data = yf.download(
+                "SPY",  # Using SPY just to get trading days
+                start=utils.subtract_trading_days(date, num_days),
+                end=(date + datetime.timedelta(days=1)),
+                progress=False,
+                auto_adjust=False,
+            )
+
+            trading_dates = price_data.index[-num_days:]
+
+            return jsonify({
+                'indicator': indicator,
+                'results': [{
+                    'result': parsed_indicator[1],
+                    'timestamp': d.strftime('%Y-%m-%d')
+                } for d in trading_dates]
+            })
+
+
         summary = preprocess(parsed_indicator)
         tickers = summary["assets"]
 
@@ -38,16 +63,17 @@ def get_algo_results():
           start=start_date,
           end=(date + datetime.timedelta(days=1)),
           progress=False,
-          auto_adjust=True,
+          auto_adjust=False,
         )
 
+        print(parsed_indicator)
         print(price_data)
 
-        range = price_data.index[-num_days:]
-        df = pd.DataFrame(0.0, index=range, columns=["value"])
+        date_range = price_data.index[-num_days:]
+        df = pd.DataFrame(0.0, index=date_range, columns=["value"])
 
         cache_data = {}
-        for r in range:
+        for r in date_range:
           value = run_indicator(parsed_indicator, r, price_data, cache_data)
           df.at[r, "value"] = value
 
@@ -65,6 +91,7 @@ def get_algo_results():
         })
 
     except Exception as e:
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/algo/<id>', methods=['GET'])
