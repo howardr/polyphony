@@ -11,6 +11,10 @@ from src.parse import parse
 import src.composer as composer
 import os
 
+tiingo_api_key = os.getenv('TIINGO_API_KEY')
+if not tiingo_api_key:
+    raise ValueError("TIINGO_API_KEY environment variable is not set")
+
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*", "methods": ["GET", "POST", "OPTIONS"]}})
 
@@ -18,10 +22,7 @@ def fetch_tiingo_data(tickers, start_date, end_date):
     """
     Fetch historical price data from Tiingo and format it similar to yfinance
     """
-    tiingo_api_key = os.getenv('TIINGO_API_KEY')
-    if not tiingo_api_key:
-        raise ValueError("TIINGO_API_KEY environment variable is not set")
-        
+
     headers = {
         'Content-Type': 'application/json',
         'Authorization': f'Token {tiingo_api_key}'
@@ -92,9 +93,6 @@ def get_algo_results():
 
         summary = preprocess(parsed_indicator)
         tickers = summary["assets"]
-
-        num_days = 30
-        date = datetime.date.today()
 
         start_date = utils.subtract_trading_days(date, summary["max_window_days"] + num_days)
         price_data = fetch_tiingo_data(
