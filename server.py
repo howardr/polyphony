@@ -67,62 +67,68 @@ def get_algo_results():
         if not indicator:
             return jsonify({'error': 'Indicator is required'}), 400
 
-        num_days = 90
-        date = datetime.date.today()
+        # Get start and finish dates from request parameters
+        start_str = request.form.get('start')
+        finish_str = request.form.get('finish')
+        
+        if not start_str or not finish_str:
+            return jsonify({'error': 'Start and finish dates are required'}), 400
+
+        try:
+            start_date = datetime.datetime.strptime(start_str, '%Y-%m-%d').date()
+            finish_date = datetime.datetime.strptime(finish_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid date format. Use YYYY-MM-DD'}), 400
+
+        if start_date > finish_date:
+            return jsonify({'error': 'Start date must be before finish date'}), 400
 
         # Parse the indicator
         parsed_indicator = json.loads(indicator)
 
         if parsed_indicator[0] == "number":
-            # Get the last num_days trading days from price data
-            price_data = fetch_tiingo_data(
-                ["SPY"],  # Using SPY just to get trading days
-                utils.subtract_trading_days(date, num_days),
-                date + datetime.timedelta(days=1)
-            )
-
-            trading_dates = price_data.index[-num_days:]
-
+            # Generate business days between start and finish
+            date_range = pd.bdate_range(start=start_date, end=finish_date, tz='UTC')
+            
             return jsonify({
                 'indicator': indicator,
                 'results': [{
                     'result': parsed_indicator[1],
                     'timestamp': d.strftime('%Y-%m-%d')
-                } for d in trading_dates]
+                } for d in date_range]
             })
 
         summary = preprocess(parsed_indicator)
         tickers = summary["assets"]
 
-        start_date = utils.subtract_trading_days(date, summary["max_window_days"] + num_days)
+        # Adjust start date to account for indicator's window requirements
+        adjusted_start = utils.subtract_trading_days(start_date, summary["max_window_days"])
         price_data = fetch_tiingo_data(
             list(tickers),
-            start_date,
-            date + datetime.timedelta(days=1)
+            adjusted_start,
+            finish_date + datetime.timedelta(days=1)
         )
 
-        # print(parsed_indicator)
-        # print(price_data)
-
-        date_range = price_data.index[-num_days:]
+        # Use the date range between start and finish
+        date_range = price_data.index[price_data.index >= pd.Timestamp(start_date).tz_localize('UTC')]
         df = pd.DataFrame(0.0, index=date_range, columns=["value"])
 
         cache_data = {}
         for r in date_range:
-          value = run_indicator(parsed_indicator, r, price_data, cache_data)
-          df.at[r, "value"] = value
+            value = run_indicator(parsed_indicator, r, price_data, cache_data)
+            df.at[r, "value"] = value
 
         # Format results
         formatted_results = [
-          {
-            'result': row[1],
-            'timestamp': row[0].strftime('%Y-%m-%d')
-          } for row in df.itertuples()
+            {
+                'result': row[1],
+                'timestamp': row[0].strftime('%Y-%m-%d')
+            } for row in df.itertuples()
         ]
 
         return jsonify({
-          'indicator': indicator,
-          'results': formatted_results
+            'indicator': indicator,
+            'results': formatted_results
         })
 
     except Exception as e:
