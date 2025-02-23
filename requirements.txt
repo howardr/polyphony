@@ -7,3 +7,5 @@ pytest==8.0.0
 Requests==2.31.0
 seaborn
 yfinance==0.2.36
+torch
+torchvision
