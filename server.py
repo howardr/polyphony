@@ -11,6 +11,9 @@ from src.parse import parse
 import src.composer as composer
 import os
 
+# docker buildx build --platform linux/amd64 -t gcr.io/howardr-polyphony/polyphony-server --push .
+# gcloud run deploy polyphony-server --image gcr.io/howardr-polyphony/polyphony-server --platform managed --region us-central1 --allow-unauthenticated --set-env-vars TIINGO_API_KEY=${TIINGO_API_KEY}
+
 tiingo_api_key = os.getenv('TIINGO_API_KEY')
 if not tiingo_api_key:
     raise ValueError("TIINGO_API_KEY environment variable is not set")
@@ -109,6 +112,13 @@ def get_algo_results():
             finish_date + datetime.timedelta(days=1)
         )
 
+        # Check if we have data for all required tickers
+        missing_tickers = set(tickers) - set(price_data.columns.get_level_values(1))
+        if missing_tickers:
+            return jsonify({
+                'error': f'Missing price data for tickers: {list(missing_tickers)}'
+            }), 400
+
         # Use the date range between start and finish
         date_range = price_data.index[price_data.index >= pd.Timestamp(start_date).tz_localize('UTC')]
         df = pd.DataFrame(0.0, index=date_range, columns=["value"])
@@ -167,12 +177,16 @@ def get_algo(id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/ping', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'pong'}), 200
+
 if __name__ == '__main__':
-    port = int(os.getenv('PORT', 5001))  # Default to 5000 if PORT not set
-    debug = os.getenv('PROD', 'false').lower() != 'true'  # Debug mode on unless PROD=true
+    port = int(os.getenv('PORT', 8080))  # Changed default to 8080 to match Docker
+    debug = os.getenv('PROD', 'false').lower() != 'true'
     
     app.run(
-        host='0.0.0.0',  # Listen on all available interfaces
+        host='0.0.0.0',
         port=port,
         debug=debug
     )
