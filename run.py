@@ -38,6 +38,7 @@ price_data = yf.download(
   start=start_date,
   end=(date + datetime.timedelta(days=1)),
   progress=False,
+  auto_adjust=False
 )
 
 range = price_data.index[-num_days:]
